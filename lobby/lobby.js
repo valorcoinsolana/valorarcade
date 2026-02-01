@@ -7,7 +7,7 @@ const GAMES = [
     title: "Dev Bot Dodger",
     desc: "You’re a dev. Bots swarm in with scam bubbles. Dodge as long as possible.",
     tags: ["Arcade Survival", "Skill-based", "Token-gated play"],
-    path: "./lobby/games/dev-bot-dodger/",
+    path: "./ValorArcade/lobby/games/dev-bot-dodger/",
     status: "live", // live | coming_soon
   },
 ];
