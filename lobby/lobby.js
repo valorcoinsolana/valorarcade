@@ -102,7 +102,10 @@ class LobbyScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const hit = this.add.rectangle(w/2, h/2, w, h, 0x000000, 0).setInteractive({ useHandCursor: g.status === "live" });
-    if (g.status === "live") hit.on("pointerdown", () => window.location.href = g.path);
+    if (g.status === "live") hit.on("pointerdown", () => {
+  const repoBase = "/" + window.location.pathname.split("/")[1] + "/";
+  window.location.href = repoBase + g.path;
+});
 
     c.add([bg, title, desc, btn, btnText, hit]);
     return c;
