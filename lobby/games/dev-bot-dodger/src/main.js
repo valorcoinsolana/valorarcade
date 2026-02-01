@@ -7,7 +7,8 @@ const H = 450;
 
 // Assets
 const SPRITES_KEY = "devBotSprites";
-const SPRITES_URL = "./assets/sprites/dev-bot-sprites.png"; // relative to this file on GitHub Pages
+const SPRITES_URL = new URL("./assets/sprites/dev-bot-sprites.png", import.meta.url).toString();
+ // relative to this file on GitHub Pages
 const FRAME = 16; // 16x16 frames
 
 // Bubble behavior (sporadic)
@@ -43,6 +44,7 @@ class DevBotDodger extends Phaser.Scene {
   }
 
   preload() {
+    this.load.on("loaderror", (file) => console.error("ASSET LOAD ERROR:", file.src));
     // Sprite sheet: rows = dev / scam / admin / verified
     // columns: idle0 idle1 move0 move1 move2 move3  (6 frames across)
     this.load.spritesheet(SPRITES_KEY, SPRITES_URL, {
