@@ -901,7 +901,8 @@ spawnContent();
     for (let i = 1; i <= 5; i++) if (keys[String(i)]) { keys[String(i)] = false; useItem(i - 1); acted = true; }
     if (keys["t"]) { keys["t"] = false; talkNearest(); acted = true; }
 
-    if (keys["s"]) { keys["s"] = false; saveGame(); }
+    if (keys["p"]) { keys["p"] = false; saveGame(); }
+
     if (keys["l"]) { keys["l"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
     if (keys["n"]) { keys["n"] = false; newGame(); acted = true; }
     if (keys["."]) { keys["."] = false; log("You wait.", "#aaa"); acted = true; }
