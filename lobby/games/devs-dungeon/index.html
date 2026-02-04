@@ -81,10 +81,58 @@
     }
     #artDebug button:hover{ background:rgba(0,255,120,0.10); }
 
-    @media (max-width:768px){
-      #ui{ font-size:13px; padding:8px 12px; max-width:94vw; left:4px; top:4px; }
-      #artDebug{ top:4px; right:4px; max-width:56vw; }
-    }
+    /* MOBILE LAYOUT FIX */
+@media (max-width: 768px) {
+  /* Use the "small viewport height" so browser UI doesn't shrink your canvas */
+  canvas {
+    width: 100vw;
+    height: 100svh;
+  }
+
+  /* Top panel (stats + log) */
+  #ui{
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    width: auto;
+    max-width: none;
+
+    font-size: 12px;
+    padding: 8px 10px;
+
+    /* Keep it from covering the whole game */
+    max-height: 32svh;
+    overflow: auto;
+
+    /* Let it scroll on mobile */
+    pointer-events: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Keep the log from taking over */
+  #log{
+    max-height: 12svh;
+    overflow: auto;
+  }
+
+  /* Bottom panel (Art Debug) */
+  #artDebug{
+    top: auto;
+    bottom: 6px;
+
+    left: 6px;
+    right: 6px;
+    width: auto;
+    max-width: none;
+
+    max-height: 28svh;
+    overflow: auto;
+
+    pointer-events: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
   </style>
 </head>
 
