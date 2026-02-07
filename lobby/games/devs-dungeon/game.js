@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+   window.__mobileMenuRects = null;
 
   // ======================
   // Part 0 - DOM + Canvas
@@ -1563,12 +1564,16 @@ if (invOpen) {
   }
 
   function drawMinimap() {
+  if (!map || !map.length || !map[0] || !explored) return;
+
   const mw = 170, mh = 120;
   const x0 = W - mw - 16;
 
-  const desktopMenuPad = (!isMobile && desktopMenuButtonRect)
-    ? (desktopMenuButtonRect.h + 12)
-    : 0;
+  const desktopMenuPad =
+    (!isMobile && desktopMenuButtonRect && desktopMenuButtonRect.h)
+      ? (desktopMenuButtonRect.h + 12)
+      : 0;
+
 
   const y0 = isMobile
     ? (MOBILE_TOP_UI_H + 12)
@@ -1886,7 +1891,9 @@ function drawDesktopMenuUI() {
 
     // Menu overlay (SAVE/LOAD/NEW)
     if (mobileMenuOpen) {
-      const w = 260, h = 170;
+      const w = 260;
+const h = 44 + opts.length * 40 + 12;
+
       const x = W - w - 18;
       const y = H - MOBILE_UI_H - h - 14;
 
