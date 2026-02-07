@@ -76,6 +76,9 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
   // ✅ Compressed mobile controls
   let mobileMenuOpen = false;
   let hotbarRects = []; // [{slot,x,y,w,h}]
+  let invOpen = false;
+let invScroll = 0;
+
 
   let audioCtx = null;
 
@@ -1038,62 +1041,80 @@ buttons = [
 
   let lastActionAt = 0;
 
-  function playerTurn() {
-    if (mobileMenuOpen) {
-  // allow menu toggle + menu actions only
-  if (
-    keys["save"] || keys["load"] || keys["new"] ||
-    keys["m"]
-  ) {
-    // allowed
-  } else {
-    return;
-  }
-}
-
-    const now = performance.now();
-    if (now - lastActionAt < 95) return;
-
-    if (gameOver || win) {
-      if (keys["n"]) { keys["n"] = false; newGame(); }
+ function playerTurn() {
+  // If mobile menu is open, only allow menu actions + toggles (M / I)
+  if (mobileMenuOpen) {
+    if (!(keys["save"] || keys["load"] || keys["new"] || keys["m"] || keys["i"])) {
       return;
     }
-
-    let acted = false;
-
-    // Hotbar use (tap 1–5 or keyboard 1–5)
-    for (let i = 1; i <= 5; i++) if (keys[String(i)]) { keys[String(i)] = false; useItem(i - 1); acted = true; }
-
-    if (keys["t"]) { keys["t"] = false; talkNearest(); acted = true; }
-
-    // Mobile menu toggle
-    if (keys["m"]) { keys["m"] = false; mobileMenuOpen = !mobileMenuOpen; }
-
-    // Desktop hotkeys
-    if (keys["p"]) { keys["p"] = false; saveGame(); }
-    if (keys["l"]) { keys["l"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
-    if (keys["n"]) { keys["n"] = false; newGame(); acted = true; }
-
-    // Mobile menu actions (virtual keys)
-    if (keys["save"]) { keys["save"] = false; saveGame(); }
-    if (keys["load"]) { keys["load"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
-    if (keys["new"])  { keys["new"]  = false; newGame(); acted = true; }
-
-    if (keys["."]) { keys["."] = false; log("You wait.", "#aaa"); acted = true; }
-
-    const mv = getMoveFromInput();
-    if (!acted && mv) acted = tryMove(mv.dx, mv.dy);
-
-    if (acted) {
-      lastActionAt = now;
-      revealFog();
-      enemyTurn();
-      revealFog();
-      if (Math.random() < 0.06) saveGame();
-    }
-
-    updateUI();
   }
+
+  // Inventory scrolling (when open)
+  if (invOpen) {
+    if (keys["arrowup"] || keys["k"]) {
+      keys["arrowup"] = false;
+      keys["k"] = false;
+      invScroll--;
+    }
+    if (keys["arrowdown"] || keys["j"]) {
+      keys["arrowdown"] = false;
+      keys["j"] = false;
+      invScroll++;
+    }
+  }
+
+  const now = performance.now();
+  if (now - lastActionAt < 95) return;
+
+  if (gameOver || win) {
+    if (keys["n"]) { keys["n"] = false; newGame(); }
+    return;
+  }
+
+  let acted = false;
+
+  // --- Toggles always allowed ---
+  if (keys["m"]) { keys["m"] = false; mobileMenuOpen = !mobileMenuOpen; }
+  if (keys["i"]) { keys["i"] = false; invOpen = !invOpen; }
+
+  // If inventory is open, block gameplay actions (after allowing toggles + scroll)
+  if (invOpen) {
+    updateUI();
+    return;
+  }
+
+  // Hotbar use (tap 1–5 or keyboard 1–5)
+  for (let i = 1; i <= 5; i++) {
+    if (keys[String(i)]) { keys[String(i)] = false; useItem(i - 1); acted = true; }
+  }
+
+  if (keys["t"]) { keys["t"] = false; talkNearest(); acted = true; }
+
+  // Desktop hotkeys
+  if (keys["p"]) { keys["p"] = false; saveGame(); }
+  if (keys["l"]) { keys["l"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
+  if (keys["n"]) { keys["n"] = false; newGame(); acted = true; }
+
+  // Mobile menu actions (virtual keys)
+  if (keys["save"]) { keys["save"] = false; saveGame(); }
+  if (keys["load"]) { keys["load"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
+  if (keys["new"])  { keys["new"]  = false; newGame(); acted = true; }
+
+  if (keys["."]) { keys["."] = false; log("You wait.", "#aaa"); acted = true; }
+
+  const mv = getMoveFromInput();
+  if (!acted && mv) acted = tryMove(mv.dx, mv.dy);
+
+  if (acted) {
+    lastActionAt = now;
+    revealFog();
+    enemyTurn();
+    revealFog();
+    if (Math.random() < 0.06) saveGame();
+  }
+
+  updateUI();
+}
 
   function updateUI() {
     UI.hp.textContent = Math.max(0, player.hp | 0);
@@ -1259,6 +1280,8 @@ buttons = [
     if (didClip) CTX.restore();
 
     if (isMobile) drawMobileControls();
+    if (invOpen) drawInventoryOverlay();
+
 
     if (gameOver || win) {
       CTX.fillStyle = "rgba(0,0,0,0.55)";
@@ -1301,6 +1324,70 @@ buttons = [
     CTX.fillStyle = "rgba(0,255,180,0.9)";
     CTX.fillRect(x0 + player.x * sx - 1, y0 + player.y * sy - 1, 3, 3);
   }
+
+  function drawInventoryOverlay() {
+  const pad = 18;
+  const w = Math.min(520, W - pad * 2);
+  const h = Math.min(420, H - pad * 2 - (isMobile ? MOBILE_UI_H : 0));
+
+  const x = (W - w) / 2;
+  const y = (isMobile ? MOBILE_TOP_UI_H + 12 : 16);
+
+  // panel
+  CTX.fillStyle = "rgba(0,0,0,0.78)";
+  CTX.fillRect(x, y, w, h);
+  CTX.strokeStyle = "rgba(0,255,120,0.25)";
+  CTX.strokeRect(x, y, w, h);
+
+  CTX.font = `bold 18px "Courier New", monospace`;
+  CTX.fillStyle = "rgba(0,255,180,0.9)";
+  CTX.textAlign = "left";
+  CTX.textBaseline = "top";
+  CTX.fillText("INVENTORY (press I to close)", x + 14, y + 12);
+
+  // list area
+  const listX = x + 14;
+  const listY = y + 44;
+  const lineH = 22;
+  const maxLines = ((h - 58) / lineH) | 0;
+
+  const hot = player.hotbar.map((it, i) => ({
+    label: `Hotbar ${i + 1}: ${it ? it.name : "(empty)"}`
+  }));
+
+  const inv = player.inv.map((it, i) => ({
+    label: `Inv ${i + 1}: ${it.name}`
+  }));
+
+  const rows = [...hot, ...inv];
+  const totalLines = rows.length;
+
+  invScroll = clamp(invScroll, 0, Math.max(0, totalLines - maxLines));
+
+  CTX.font = `16px "Courier New", monospace`;
+  for (let i = 0; i < maxLines; i++) {
+    const idx = invScroll + i;
+    if (idx >= rows.length) break;
+    const t = rows[idx].label;
+    CTX.fillStyle = "rgba(0,255,160,0.85)";
+    CTX.fillText(t, listX, listY + i * lineH);
+  }
+
+  // simple scrollbar hint
+  if (totalLines > maxLines) {
+    CTX.fillStyle = "rgba(0,255,120,0.18)";
+    CTX.fillRect(x + w - 10, listY, 4, h - 58);
+
+    const trackH = h - 58;
+    const thumbH = Math.max(20, (trackH * (maxLines / totalLines)) | 0);
+    const thumbY = listY + ((trackH - thumbH) * (invScroll / (totalLines - maxLines)));
+    CTX.fillStyle = "rgba(0,255,180,0.55)";
+    CTX.fillRect(x + w - 10, thumbY, 4, thumbH);
+  }
+
+  CTX.textAlign = "left";
+}
+
 
   function drawMobileControls() {
   CTX.font = `bold 14px "Courier New", monospace`;
