@@ -80,6 +80,10 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
 let invScroll = 0;
   // which inventory row is selected (0-based within the FULL inv array)
 let invIndex = 0;
+  // Inventory overlay touch hit-rects (set during drawInventoryOverlay)
+let invUIRects = null;     // { panel, close, use, rows:[{i,x,y,w,h}] }
+let invPageLines = 8;      // updated each frame from drawInventoryOverlay
+
 
 
   let audioCtx = null;
@@ -466,6 +470,31 @@ buttons = [
     if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 
     const t = getTouch(e.changedTouches[0]);
+        // Inventory overlay taps (mobile)
+    if (invOpen && invUIRects) {
+      // hit helper
+      const hit = (r) => r && (t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h);
+
+      // Close
+      if (hit(invUIRects.close)) { keys["i"] = true; return; }
+
+      // Use
+      if (hit(invUIRects.use)) { keys["enter"] = true; return; }
+
+      // Tap a row to select
+      if (invUIRects.rows && invUIRects.rows.length) {
+        for (const rr of invUIRects.rows) {
+          if (hit(rr)) {
+            invIndex = rr.i | 0;
+            return;
+          }
+        }
+      }
+
+      // If tapped inside panel, swallow input so you don't move/act underneath
+      if (hit(invUIRects.panel)) return;
+    }
+
 
     // Hotbar taps 1–5
     for (const r of hotbarRects) {
@@ -943,6 +972,9 @@ buttons = [
 // ======================
 // Item usage (shared)
 // ======================
+// ======================
+// Item usage (shared)
+// ======================
 function applyItem(it) {
   if (!it) return false;
 
@@ -966,9 +998,24 @@ function applyItem(it) {
     return true;
   }
 
+  if (it.kind === "atk") {
+    player.atk += it.amount;
+    log(`ATK +${it.amount}.`, "#f6f");
+    beep(520, 0.05, 0.10, "triangle");
+    return true;
+  }
+
+  if (it.kind === "def") {
+    player.def += it.amount;
+    log(`DEF +${it.amount}.`, "#6ff");
+    beep(520, 0.05, 0.10, "triangle");
+    return true;
+  }
+
   log("That item can't be used.", "#f96");
   return false;
 }
+
 
 // ======================
 // Hotbar usage (1–5)
@@ -996,34 +1043,7 @@ function useInventoryItem(index) {
   const it = player.inv[i];
   if (!it) { log("No item selected.", "#aaa"); return; }
 
-  if (it.kind === "heal") {
-    const before = player.hp;
-    player.hp = Math.min(player.maxhp, player.hp + it.amount);
-    log(`Healed ${player.hp - before}.`, "#9f9");
-    beep(640, 0.06, 0.10, "triangle");
-
-  } else if (it.kind === "gas") {
-    player.gas += it.amount;
-    log(`+${it.amount} Gas.`, "#0ff");
-    beep(880, 0.05, 0.10);
-
-  } else if (it.kind === "xp") {
-    gainXP(it.amount);
-
-  } else if (it.kind === "atk") {
-    player.atk += it.amount;
-    log(`ATK +${it.amount}.`, "#f6f");
-    beep(520, 0.05, 0.10, "triangle");
-
-  } else if (it.kind === "def") {
-    player.def += it.amount;
-    log(`DEF +${it.amount}.`, "#6ff");
-    beep(520, 0.05, 0.10, "triangle");
-
-  } else {
-    log("Can't use that item.", "#f96");
-    return;
-  }
+  if (!applyItem(it)) return;
 
   // remove used item
   player.inv.splice(i, 1);
@@ -1031,6 +1051,7 @@ function useInventoryItem(index) {
   // keep cursor valid
   invIndex = clamp(invIndex, 0, Math.max(0, player.inv.length - 1));
 }
+
 
 
   function talkNearest() {
@@ -1161,9 +1182,10 @@ if (invOpen) {
 
   invIndex = clamp(invIndex, 0, Math.max(0, total - 1));
 
-  // optional: keep scroll roughly following selection
-  const page = 8; // how many lines you draw
+    // keep scroll roughly following selection (page size matches drawn overlay)
+  const page = Math.max(3, invPageLines | 0);
   invScroll = clamp(invIndex - 1, 0, Math.max(0, total - page));
+
 }
 
 
@@ -1442,66 +1464,160 @@ if (invOpen) {
 
   function drawInventoryOverlay() {
   const pad = 18;
-  const w = Math.min(520, W - pad * 2);
-  const h = Math.min(420, H - pad * 2 - (isMobile ? MOBILE_UI_H : 0));
+  const w = Math.min(560, W - pad * 2);
+  const h = Math.min(460, H - pad * 2 - (isMobile ? MOBILE_UI_H : 0));
 
   const x = (W - w) / 2;
   const y = (isMobile ? MOBILE_TOP_UI_H + 12 : 16);
 
   // panel
-  CTX.fillStyle = "rgba(0,0,0,0.78)";
+  CTX.fillStyle = "rgba(0,0,0,0.82)";
   CTX.fillRect(x, y, w, h);
   CTX.strokeStyle = "rgba(0,255,120,0.25)";
   CTX.strokeRect(x, y, w, h);
 
+  // Title
   CTX.font = `bold 18px "Courier New", monospace`;
   CTX.fillStyle = "rgba(0,255,180,0.9)";
   CTX.textAlign = "left";
   CTX.textBaseline = "top";
-  CTX.fillText("INVENTORY (press I to close)", x + 14, y + 12);
+  CTX.fillText("INVENTORY", x + 14, y + 12);
 
-  // list area
+  // Hint line
+  CTX.font = `14px "Courier New", monospace`;
+  CTX.fillStyle = "rgba(0,255,160,0.70)";
+  CTX.fillText(isMobile ? "Tap item → USE. Tap CLOSE to exit." : "↑/↓ (or J/K), Enter/Space to use, I to close", x + 14, y + 34);
+
+  // Layout
   const listX = x + 14;
-  const listY = y + 44;
+  const listY = y + 62;
   const lineH = 22;
-  const maxLines = ((h - 58) / lineH) | 0;
 
-  const hot = player.hotbar.map((it, i) => ({
-    label: `Hotbar ${i + 1}: ${it ? it.name : "(empty)"}`
-  }));
+  // Reserve bottom area for buttons (especially on mobile)
+  const btnAreaH = isMobile ? 58 : 44;
+  const listH = Math.max(120, (h - 62 - btnAreaH - 12));
+  const maxLines = Math.max(3, (listH / lineH) | 0);
 
-  const inv = player.inv.map((it, i) => ({
-    label: `Inv ${i + 1}: ${it.name}`
-  }));
+  invPageLines = maxLines;
 
-  const rows = [...hot, ...inv];
-  const totalLines = rows.length;
+  // Hotbar preview (non-selectable)
+  const hotbarLines = 5;
+  CTX.font = `bold 15px "Courier New", monospace`;
+  CTX.fillStyle = "rgba(0,255,180,0.85)";
+  CTX.fillText("HOTBAR", listX, listY - 2);
 
-  invScroll = clamp(invScroll, 0, Math.max(0, totalLines - maxLines));
-
-  CTX.font = `16px "Courier New", monospace`;
-  for (let i = 0; i < maxLines; i++) {
-    const idx = invScroll + i;
-    if (idx >= rows.length) break;
-    const t = rows[idx].label;
-    CTX.fillStyle = "rgba(0,255,160,0.85)";
-    CTX.fillText(t, listX, listY + i * lineH);
+  CTX.font = `14px "Courier New", monospace`;
+  for (let i = 0; i < hotbarLines; i++) {
+    const it = player.hotbar[i];
+    const yy = listY + (i + 1) * lineH;
+    CTX.fillStyle = "rgba(0,255,160,0.70)";
+    CTX.fillText(`${i + 1}: ${it ? it.name : "(empty)"}`, listX, yy);
   }
 
-  // simple scrollbar hint
-  if (totalLines > maxLines) {
-    CTX.fillStyle = "rgba(0,255,120,0.18)";
-    CTX.fillRect(x + w - 10, listY, 4, h - 58);
+  // Inventory header
+  const invHeaderY = listY + (hotbarLines + 2) * lineH;
+  CTX.font = `bold 15px "Courier New", monospace`;
+  CTX.fillStyle = "rgba(0,255,180,0.85)";
+  CTX.fillText("BAG", listX, invHeaderY);
 
-    const trackH = h - 58;
-    const thumbH = Math.max(20, (trackH * (maxLines / totalLines)) | 0);
-    const thumbY = listY + ((trackH - thumbH) * (invScroll / (totalLines - maxLines)));
+  // Inventory rows start
+  const rowsY0 = invHeaderY + lineH;
+  const rowsH = (y + h - btnAreaH - 12) - rowsY0;
+  const invMaxLines = Math.max(1, (rowsH / lineH) | 0);
+
+  // Scroll and clamp selection
+  const total = player.inv.length;
+  invIndex = clamp(invIndex, 0, Math.max(0, total - 1));
+  invScroll = clamp(invScroll, 0, Math.max(0, total - invMaxLines));
+
+  // If empty inventory
+  if (total === 0) {
+    CTX.font = `14px "Courier New", monospace`;
+    CTX.fillStyle = "rgba(200,200,200,0.75)";
+    CTX.fillText("(empty)", listX, rowsY0 + 4);
+  }
+
+  // Build touch rects for visible rows
+  const rows = [];
+  const rowW = w - 28;
+  for (let li = 0; li < invMaxLines; li++) {
+    const idx = invScroll + li;
+    if (idx >= total) break;
+
+    const yy = rowsY0 + li * lineH;
+
+    // highlight selected
+    if (idx === invIndex) {
+      CTX.fillStyle = "rgba(0,255,120,0.12)";
+      CTX.fillRect(listX - 6, yy - 2, rowW, lineH);
+      CTX.strokeStyle = "rgba(0,255,180,0.25)";
+      CTX.strokeRect(listX - 6, yy - 2, rowW, lineH);
+    }
+
+    const it = player.inv[idx];
+    CTX.font = `16px "Courier New", monospace`;
+    CTX.fillStyle = (idx === invIndex) ? "rgba(0,255,200,0.95)" : "rgba(0,255,160,0.85)";
+    CTX.fillText(`${idx + 1}. ${it.name}`, listX, yy);
+
+    rows.push({ i: idx, x: listX - 6, y: yy - 2, w: rowW, h: lineH });
+  }
+
+  // Simple scrollbar (inventory only)
+  if (total > invMaxLines) {
+    const trackX = x + w - 10;
+    const trackY = rowsY0;
+    const trackH = invMaxLines * lineH;
+
+    CTX.fillStyle = "rgba(0,255,120,0.14)";
+    CTX.fillRect(trackX, trackY, 4, trackH);
+
+    const thumbH = Math.max(18, (trackH * (invMaxLines / total)) | 0);
+    const thumbY = trackY + ((trackH - thumbH) * (invScroll / (total - invMaxLines)));
     CTX.fillStyle = "rgba(0,255,180,0.55)";
-    CTX.fillRect(x + w - 10, thumbY, 4, thumbH);
+    CTX.fillRect(trackX, thumbY, 4, thumbH);
   }
 
+  // Bottom buttons: USE + CLOSE
+  const btnY = y + h - btnAreaH;
+  const btnPad = 12;
+  const btnH = isMobile ? 44 : 32;
+  const btnW = ((w - btnPad * 3) / 2) | 0;
+
+  const useRect = { x: x + btnPad, y: btnY + (btnAreaH - btnH) / 2, w: btnW, h: btnH };
+  const closeRect = { x: x + btnPad * 2 + btnW, y: useRect.y, w: btnW, h: btnH };
+
+  // USE
+  CTX.fillStyle = "rgba(0,255,120,0.10)";
+  CTX.fillRect(useRect.x, useRect.y, useRect.w, useRect.h);
+  CTX.strokeStyle = "rgba(0,255,120,0.22)";
+  CTX.strokeRect(useRect.x, useRect.y, useRect.w, useRect.h);
+  CTX.fillStyle = "rgba(0,255,180,0.85)";
+  CTX.font = `bold 16px "Courier New", monospace`;
+  CTX.textAlign = "center";
+  CTX.textBaseline = "middle";
+  CTX.fillText("USE", useRect.x + useRect.w / 2, useRect.y + useRect.h / 2);
+
+  // CLOSE
+  CTX.fillStyle = "rgba(0,255,120,0.06)";
+  CTX.fillRect(closeRect.x, closeRect.y, closeRect.w, closeRect.h);
+  CTX.strokeStyle = "rgba(0,255,120,0.16)";
+  CTX.strokeRect(closeRect.x, closeRect.y, closeRect.w, closeRect.h);
+  CTX.fillStyle = "rgba(0,255,160,0.75)";
+  CTX.fillText("CLOSE", closeRect.x + closeRect.w / 2, closeRect.y + closeRect.h / 2);
+
+  // Publish touch rects
+  invUIRects = {
+    panel: { x, y, w, h },
+    use: useRect,
+    close: closeRect,
+    rows
+  };
+
+  // restore defaults
   CTX.textAlign = "left";
+  CTX.textBaseline = "top";
 }
+
 
 
   function drawMobileControls() {
