@@ -1569,23 +1569,36 @@ if (invOpen) {
     }
 
     // Player
-    {
-      const px = ox + player.x * TS;
-      const py = oy + player.y * TS;
+{
+  const px = ox + player.x * TS;
+  const py = oy + player.y * TS;
 
-      CTX.fillStyle = "rgba(0,255,160,0.12)";
-      CTX.fillRect(px - 3, py - 3, TS + 6, TS + 6);
+  // --- Player shadow ---
+  CTX.save();
+  CTX.fillStyle = "rgba(0,0,0,0.35)";
+  CTX.beginPath();
+  CTX.ellipse(
+    px + TS / 2,
+    py + TS - 4,
+    TS * 0.32,
+    TS * 0.14,
+    0,
+    0,
+    Math.PI * 2
+  );
+  CTX.fill();
+  CTX.restore();
 
-      const frames = playerFramesForFacing(player.facing);
+  const frames = playerFramesForFacing(player.facing);
+  const im = (frames && frames[player.step]) || firstAvailableFrame(frames);
 
-// draw exact step frame (no time-based anim)
-const im = (frames && frames[player.step]) || firstAvailableFrame(frames);
-
-if (im) {
-  CTX.drawImage(im, 0, 0, SPRITE_SRC, SPRITE_SRC, px, py, TS, TS);
-} else {
-  drawText(px + 4, py + 2, "@", "#0f8");
+  if (im) {
+    CTX.drawImage(im, 0, 0, SPRITE_SRC, SPRITE_SRC, px, py, TS, TS);
+  } else {
+    drawText(px + 4, py + 2, "@", "#0f8");
+  }
 }
+
 
     }
         // ===== UI overlays (minimap + menu + controls) =====
