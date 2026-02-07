@@ -1598,9 +1598,6 @@ if (invOpen) {
     drawText(px + 4, py + 2, "@", "#0f8");
   }
 }
-
-
-    }
         // ===== UI overlays (minimap + menu + controls) =====
     // world is clipped on mobile; UI should draw OUTSIDE the clip
     if (didClip) CTX.restore();
