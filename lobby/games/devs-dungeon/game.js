@@ -1296,9 +1296,30 @@ if (invOpen) {
   if (now - lastActionAt < 95) return;
 
   if (gameOver || win) {
-    if (keys["n"]) { keys["n"] = false; newGame(); }
+  // allow MENU toggle while dead
+  if (keys["m"]) { keys["m"] = false; mobileMenuOpen = !mobileMenuOpen; }
+
+  // allow restart via key OR menu item
+  if (keys["n"] || keys["new"]) {
+    keys["n"] = false;
+    keys["new"] = false;
+    newGame();
     return;
   }
+
+  // allow arcade return via menu item
+  if (keys["arcade"]) {
+    keys["arcade"] = false;
+    location.href = "https://valorcoinsolana.github.io/valorarcade/";
+    return;
+  }
+
+  // optional: allow save/load even on death screen
+  if (keys["save"]) { keys["save"] = false; saveGame(); }
+  if (keys["load"]) { keys["load"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
+
+  return;
+}
 
   let acted = false;
 
@@ -1777,6 +1798,7 @@ function drawDesktopMenuUI() {
   { k:"load",   t:"LOAD" },
   { k:"new",    t:"NEW"  },
   { k:"i",      t:"INVENTORY" },
+    { k:"n",      t:"RESTART" },
   { k:"n",      t:"RESTART" },
   { k:"arcade", t:"ARCADE" },
 ];
