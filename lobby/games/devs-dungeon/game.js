@@ -1560,8 +1560,6 @@ if (invOpen) {
     if (isMobile) drawMobileControls();
 
     requestAnimationFrame(render);
-
-    requestAnimationFrame(render);
   }
 
   function drawMinimap() {
