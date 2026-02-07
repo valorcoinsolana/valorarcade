@@ -307,35 +307,52 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
   // Part 3 - Resize + Mobile layout (COMPRESSED CONTROLS)
   // ======================
   function updateButtons() {
-  const safePad = 14;
+  // --- Right-side cluster should be HORIZONTAL (MENU / TALK / WAIT)
+  const baseY = isMobile ? (H - MOBILE_UI_H + 92) : (H - 70); // sits in the bottom UI zone
+  const baseX = W - 70;
+  const gap = 72;
 
-  // --- Hotbar (bottom centered) ---
+  // buttons[0]=WAIT, buttons[1]=TALK, buttons[2]=MENU (keep same ids)
+  if (buttons[2]) { buttons[2].cx = baseX;         buttons[2].cy = baseY; } // MENU
+  if (buttons[1]) { buttons[1].cx = baseX - gap;   buttons[1].cy = baseY; } // TALK
+  if (buttons[0]) { buttons[0].cx = baseX - gap*2; buttons[0].cy = baseY; } // WAIT
+
+  // --- Hotbar row (tap 1–5)
   hotbarRects = [];
   const slots = 5;
   const pad = 10;
-
-  // shrink hotbar if the screen is narrow
-  const maxSize = 56;
-  const minSize = 44;
-  const size = clamp(
-    ((W - safePad * 2 - pad * (slots - 1)) / slots) | 0,
-    minSize,
-    maxSize
-  );
-
+  const size = 56;
   const totalW = slots * size + (slots - 1) * pad;
-  const startX = (W - totalW) / 2;
-  const hotbarY = H - safePad - size;
+
+  // Place hotbar near top of the bottom reserved zone
+  const bottomTop = H - MOBILE_UI_H;
+  const y = bottomTop + 14;
+
+  // Centered by default...
+  let startX = (W - totalW) / 2;
+
+  // ...but on mobile, avoid overlapping the D-pad footprint
+  if (isMobile) {
+    const dpadRightEdge = dpad.cx + dpad.size * 0.5;
+    const avoidX = dpadRightEdge + 18;            // padding past D-pad
+    startX = Math.max(startX, avoidX);
+
+    // keep it on-screen
+    startX = Math.min(startX, W - totalW - 14);
+    startX = Math.max(startX, 14);
+  }
 
   for (let i = 0; i < slots; i++) {
     hotbarRects.push({
       slot: i,
       x: startX + i * (size + pad),
-      y: hotbarY,
+      y,
       w: size,
       h: size
     });
   }
+}
+
 
   // --- Right-side button cluster (stacked ABOVE hotbar) ---
   if (!buttons.length) return;
@@ -377,7 +394,7 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
 
     const margin = Math.max(18, TS);
     dpad.cx = margin + dpad.size * 0.5;
-    dpad.cy = H - margin - dpad.size * 0.5;
+    dpad.cy = H - margin - dpad.size * 0.5 - (isMobile ? 18 : 0);
 
     // Precompute rects (up/down/left/right)
     const b = dpad.btn, g = dpad.gap;
