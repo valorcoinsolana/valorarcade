@@ -307,39 +307,61 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
   // Part 3 - Resize + Mobile layout (COMPRESSED CONTROLS)
   // ======================
   function updateButtons() {
-    // Right-side cluster: MENU, TALK, WAIT (small)
-    const rightX = W - 70;
-    const bottomY = H - 70;
-    const gap = 72;
+  const safePad = 14;
 
-    // buttons[0]=WAIT, buttons[1]=TALK, buttons[2]=MENU
-    if (buttons[0]) { buttons[0].cx = rightX; buttons[0].cy = bottomY; }
-    if (buttons[1]) { buttons[1].cx = rightX; buttons[1].cy = bottomY - gap; }
-    if (buttons[2]) { buttons[2].cx = rightX; buttons[2].cy = bottomY - gap * 2; }
+  // --- Hotbar (bottom centered) ---
+  hotbarRects = [];
+  const slots = 5;
+  const pad = 10;
 
-    // Horizontal hotbar row centered
-    hotbarRects = [];
-    const slots = 5;
-    const pad = 10;
-    const size = 56;
-    const totalW = slots * size + (slots - 1) * pad;
-    const startX = (W - totalW) / 2;
+  // shrink hotbar if the screen is narrow
+  const maxSize = 56;
+  const minSize = 44;
+  const size = clamp(
+    ((W - safePad * 2 - pad * (slots - 1)) / slots) | 0,
+    minSize,
+    maxSize
+  );
 
-        // Place hotbar near top of bottom reserved zone
-    const bottomTop = H - MOBILE_UI_H;
-    const y = bottomTop + 14;
+  const totalW = slots * size + (slots - 1) * pad;
+  const startX = (W - totalW) / 2;
+  const hotbarY = H - safePad - size;
 
-
-    for (let i = 0; i < slots; i++) {
-      hotbarRects.push({
-        slot: i,
-        x: startX + i * (size + pad),
-        y,
-        w: size,
-        h: size
-      });
-    }
+  for (let i = 0; i < slots; i++) {
+    hotbarRects.push({
+      slot: i,
+      x: startX + i * (size + pad),
+      y: hotbarY,
+      w: size,
+      h: size
+    });
   }
+
+  // --- Right-side button cluster (stacked ABOVE hotbar) ---
+  if (!buttons.length) return;
+
+  const r = buttons[0].r;
+  const gap = r * 2 + 12; // MUST be >= diameter to prevent overlap
+
+  const cx = W - safePad - r;
+
+  // put WAIT just above the hotbar, then TALK, then MENU above that
+  const waitCy = hotbarY - (r + 10);
+
+  // buttons[0]=WAIT, buttons[1]=TALK, buttons[2]=MENU
+  buttons[0].cx = cx; buttons[0].cy = waitCy;
+  buttons[1].cx = cx; buttons[1].cy = waitCy - gap;
+  buttons[2].cx = cx; buttons[2].cy = waitCy - gap * 2;
+
+  // keep the top-most button inside the bottom safe zone
+  const bottomTop = H - MOBILE_UI_H;
+  const minTop = bottomTop + r + 8;
+  const shiftDown = Math.max(0, minTop - buttons[2].cy);
+  if (shiftDown > 0) {
+    for (const b of buttons) b.cy += shiftDown;
+  }
+}
+
 
   function resize() {
     W = C.width = Math.min(innerWidth, 1440);
@@ -408,11 +430,13 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
 
 
     // Compressed mobile buttons
-    buttons = [
-      { id: ".", label: "WAIT", r: 42 },
-      { id: "t", label: "TALK", r: 42 },
-      { id: "m", label: "MENU", r: 42 },
-    ];
+    const r = clamp((TS * 1.6) | 0, 30, 42); // smaller on small screens
+buttons = [
+  { id: ".", label: "WAIT", r },
+  { id: "t", label: "TALK", r },
+  { id: "m", label: "MENU", r },
+];
+
 
     updateButtons();
   }
