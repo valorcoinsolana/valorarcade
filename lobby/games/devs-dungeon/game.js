@@ -1541,17 +1541,17 @@ if (invOpen) {
         drawText(px + 4, py + 2, "@", "#0f8");
       }
     }
+    requestAnimationFrame(render);
+  }
 
-    function drawMinimap() {
+  function drawMinimap() {
   const mw = 170, mh = 120;
   const x0 = W - mw - 16;
 
-  // Desktop: push minimap down under the MENU button if it exists
   const desktopMenuPad = (!isMobile && desktopMenuButtonRect)
     ? (desktopMenuButtonRect.h + 12)
     : 0;
 
-  // Keep minimap below the top HTML UI on mobile, and below MENU on desktop
   const y0 = isMobile
     ? (MOBILE_TOP_UI_H + 12)
     : (16 + desktopMenuPad);
@@ -1575,35 +1575,6 @@ if (invOpen) {
   CTX.fillRect(x0 + player.x * sx - 1, y0 + player.y * sy - 1, 3, 3);
 }
 
-
-    requestAnimationFrame(render);
-  }
-
-  function drawMinimap() {
-    const mw = 170, mh = 120;
-    const x0 = W - mw - 16;
-
-    // Keep minimap below the top HTML UI on mobile
-    const y0 = (isMobile ? (MOBILE_TOP_UI_H + 12) : 16);
-
-    CTX.fillStyle = "rgba(0,20,0,0.65)";
-    CTX.fillRect(x0, y0, mw, mh);
-    CTX.strokeStyle = "rgba(0,255,120,0.35)";
-    CTX.strokeRect(x0, y0, mw, mh);
-
-    const sx = mw / map[0].length;
-    const sy = mh / map.length;
-
-    for (let y = 0; y < map.length; y++) for (let x = 0; x < map[0].length; x++) {
-      if (!explored[y][x]) continue;
-      const ch = map[y][x];
-      CTX.fillStyle = (ch === "#") ? "rgba(0,80,40,0.25)" : "rgba(0,255,120,0.10)";
-      CTX.fillRect(x0 + x * sx, y0 + y * sy, sx + 0.5, sy + 0.5);
-    }
-
-    CTX.fillStyle = "rgba(0,255,180,0.9)";
-    CTX.fillRect(x0 + player.x * sx - 1, y0 + player.y * sy - 1, 3, 3);
-  }
 
   function drawInventoryOverlay() {
   const pad = 18;
@@ -1777,7 +1748,7 @@ function drawDesktopMenuUI() {
   CTX.fillStyle = "rgba(0,255,180,0.85)";
   CTX.textAlign = "center";
   CTX.textBaseline = "middle";
-  CTX.fillText("MENU (M)", x + btnW/2, y + btnH/2);
+  CTX.fillText("MENU (M)", x + btnW / 2, y + btnH / 2);
 
   // Menu overlay when open
   if (!mobileMenuOpen) {
@@ -1787,22 +1758,7 @@ function drawDesktopMenuUI() {
     return;
   }
 
-  const mw = 280, mh = 220;
-  const mx = W - mw - 16;
-  const my = y + btnH + 10;
-
-  CTX.fillStyle = "rgba(0,0,0,0.72)";
-  CTX.fillRect(mx, my, mw, mh);
-  CTX.strokeStyle = "rgba(0,255,120,0.25)";
-  CTX.strokeRect(mx, my, mw, mh);
-
-  CTX.font = `bold 16px "Courier New", monospace`;
-  CTX.fillStyle = "rgba(0,255,180,0.85)";
-  CTX.textAlign = "left";
-  CTX.textBaseline = "top";
-  CTX.fillText("MENU", mx + 14, my + 14);
-
-    const opts = [
+  const opts = [
     { k:"save",   t:"SAVE" },
     { k:"load",   t:"LOAD" },
     { k:"new",    t:"NEW"  },
@@ -1821,6 +1777,18 @@ function drawDesktopMenuUI() {
   const mx = W - mw - 16;
   const my = y + btnH + 10;
 
+  CTX.fillStyle = "rgba(0,0,0,0.72)";
+  CTX.fillRect(mx, my, mw, mh);
+  CTX.strokeStyle = "rgba(0,255,120,0.25)";
+  CTX.strokeRect(mx, my, mw, mh);
+
+  CTX.font = `bold 16px "Courier New", monospace`;
+  CTX.fillStyle = "rgba(0,255,180,0.85)";
+  CTX.textAlign = "left";
+  CTX.textBaseline = "top";
+  CTX.fillText("MENU", mx + 14, my + 14);
+
+  const rowY0 = my + 44;
 
   desktopMenuRects = opts.map((o, idx) => ({
     key: o.k,
@@ -1844,6 +1812,7 @@ function drawDesktopMenuUI() {
   CTX.textAlign = "left";
   CTX.textBaseline = "top";
 }
+
 
 
   function drawMobileControls() {
