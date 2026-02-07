@@ -373,8 +373,8 @@ let invScroll = 0;
     W = C.width = Math.min(innerWidth, 1440);
     H = C.height = Math.min(innerHeight, 820);
 
-    TS = Math.min((W / 60) | 0, (H / 36) | 0, 40);
-    TS = Math.max(TS, 14);
+    TS = Math.min((W / 36) | 0, (H / 22) | 0, 64);
+TS = Math.max(TS, 26);
 
        // Compact D-pad bottom-left
     dpad.size = Math.min(170, Math.max(120, (Math.min(W, H) * 0.30) | 0));
