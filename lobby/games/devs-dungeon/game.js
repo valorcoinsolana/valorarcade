@@ -322,6 +322,14 @@ playerR: ["assets/tiles/player_r_0.png", "assets/tiles/player_r_1.png"],
     if (ch === "A") return GFX.frames.npcA;
     return null;
   }
+  function playerFramesForFacing(f) {
+  if (f === "up") return GFX.frames.playerU;
+  if (f === "down") return GFX.frames.playerD;
+  if (f === "left") return GFX.frames.playerL;
+  if (f === "right") return GFX.frames.playerR;
+  return GFX.frames.playerD; // safe default
+}
+
 
   // ======================
   // Part 3 - Resize + Mobile layout (COMPRESSED CONTROLS)
@@ -666,6 +674,11 @@ C.addEventListener("mousedown", (e) => {
       map = d.map;
       explored = d.explored;
       player = d.player;
+      // --- migrate older saves ---
+if (!player.facing) player.facing = "down";
+if (player.step !== 0 && player.step !== 1) player.step = 0;
+if (!player.stepAt) player.stepAt = 0;
+
       entities = d.entities || [];
       items = d.items || [];
       npcs = d.npcs || [];
