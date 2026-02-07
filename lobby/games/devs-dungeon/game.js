@@ -1542,30 +1542,39 @@ if (invOpen) {
       }
     }
 
-    drawMinimap();
+    function drawMinimap() {
+  const mw = 170, mh = 120;
+  const x0 = W - mw - 16;
 
-    // End clip BEFORE drawing touch UI
-    if (didClip) CTX.restore();
+  // Desktop: push minimap down under the MENU button if it exists
+  const desktopMenuPad = (!isMobile && desktopMenuButtonRect)
+    ? (desktopMenuButtonRect.h + 12)
+    : 0;
 
-    if (isMobile) drawMobileControls();
-else drawDesktopMenuUI();
+  // Keep minimap below the top HTML UI on mobile, and below MENU on desktop
+  const y0 = isMobile
+    ? (MOBILE_TOP_UI_H + 12)
+    : (16 + desktopMenuPad);
 
-if (invOpen) drawInventoryOverlay();
+  CTX.fillStyle = "rgba(0,20,0,0.65)";
+  CTX.fillRect(x0, y0, mw, mh);
+  CTX.strokeStyle = "rgba(0,255,120,0.35)";
+  CTX.strokeRect(x0, y0, mw, mh);
 
+  const sx = mw / map[0].length;
+  const sy = mh / map.length;
 
+  for (let y = 0; y < map.length; y++) for (let x = 0; x < map[0].length; x++) {
+    if (!explored[y][x]) continue;
+    const ch = map[y][x];
+    CTX.fillStyle = (ch === "#") ? "rgba(0,80,40,0.25)" : "rgba(0,255,120,0.10)";
+    CTX.fillRect(x0 + x * sx, y0 + y * sy, sx + 0.5, sy + 0.5);
+  }
 
-    if (gameOver || win) {
-      CTX.fillStyle = "rgba(0,0,0,0.55)";
-      CTX.fillRect(0, 0, W, H);
-      CTX.font = `${Math.max(18, (TS * 1.2) | 0)}px "Courier New", monospace`;
-      CTX.textBaseline = "middle";
-      CTX.textAlign = "center";
-      drawText(W/2, H/2 - 20, gameOver ? "YOU GOT RUGGED" : "GENESIS BLOCK CLEARED", gameOver ? "#f66" : "#0ff", "center");
-      CTX.font = `${Math.max(14, (TS * 0.8) | 0)}px "Courier New", monospace`;
-      drawText(W/2, H/2 + 16, "Press N to restart", "#ff9", "center");
-      CTX.textAlign = "left";
-      CTX.textBaseline = "top";
-    }
+  CTX.fillStyle = "rgba(0,255,180,0.9)";
+  CTX.fillRect(x0 + player.x * sx - 1, y0 + player.y * sy - 1, 3, 3);
+}
+
 
     requestAnimationFrame(render);
   }
@@ -1793,19 +1802,25 @@ function drawDesktopMenuUI() {
   CTX.textBaseline = "top";
   CTX.fillText("MENU", mx + 14, my + 14);
 
-  const opts = [
-  { k:"save",   t:"SAVE" },
-  { k:"load",   t:"LOAD" },
-  { k:"new",    t:"NEW"  },
-  { k:"i",      t:"INVENTORY" },
+    const opts = [
+    { k:"save",   t:"SAVE" },
+    { k:"load",   t:"LOAD" },
+    { k:"new",    t:"NEW"  },
+    { k:"i",      t:"INVENTORY" },
     { k:"n",      t:"RESTART" },
-  { k:"n",      t:"RESTART" },
-  { k:"arcade", t:"ARCADE" },
-];
+    { k:"arcade", t:"ARCADE" },
+  ];
 
-
-  const rowY0 = my + 44;
   const rowH = 36;
+  const headerH = 44;
+  const innerPad = 14;
+
+  const mw = 280;
+  const mh = headerH + opts.length * rowH + innerPad; // ✅ dynamic height
+
+  const mx = W - mw - 16;
+  const my = y + btnH + 10;
+
 
   desktopMenuRects = opts.map((o, idx) => ({
     key: o.k,
