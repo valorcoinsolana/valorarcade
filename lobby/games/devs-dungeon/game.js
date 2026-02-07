@@ -610,17 +610,18 @@ function inRect(p, r) {
 }
 
 C.addEventListener("mousedown", (e) => {
-  if (gameOver || win) return;
   const p = getMouse(e);
 
-  // Click the small MENU button (desktop)
+  // allow menu button even when dead/win
   if (!isMobile && inRect(p, desktopMenuButtonRect)) {
     keys["m"] = true;
     e.preventDefault();
     return;
   }
 
-  // Click desktop menu items if open
+  if (gameOver || win) return;
+
+  // click menu items
   if (!isMobile && mobileMenuOpen && desktopMenuRects) {
     for (const r of desktopMenuRects) {
       if (inRect(p, r)) {
@@ -631,6 +632,7 @@ C.addEventListener("mousedown", (e) => {
     }
   }
 });
+
 
 
   // ======================
@@ -1541,6 +1543,24 @@ if (invOpen) {
         drawText(px + 4, py + 2, "@", "#0f8");
       }
     }
+        // ===== UI overlays (minimap + menu + controls) =====
+    // world is clipped on mobile; UI should draw OUTSIDE the clip
+    if (didClip) CTX.restore();
+
+    // Desktop UI (menu button + dropdown)
+    if (!isMobile) drawDesktopMenuUI();
+
+    // Minimap (needs desktopMenuButtonRect to be set first)
+    drawMinimap();
+
+    // Inventory overlay
+    if (invOpen) drawInventoryOverlay();
+
+    // Mobile controls (dpad/hotbar/buttons/menu overlay)
+    if (isMobile) drawMobileControls();
+
+    requestAnimationFrame(render);
+
     requestAnimationFrame(render);
   }
 
