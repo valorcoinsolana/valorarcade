@@ -1133,12 +1133,50 @@ function useInventoryItem(index) {
     if (Math.random() < 0.25) player.gas += rand(1, 8);
     beep(520, 0.04, 0.10, "triangle");
   }
+  function tryNudgeNPC(n) {
+  if (!n) return false;
+
+  // try random-ish order so it feels less robotic
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  for (let i = dirs.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const tmp = dirs[i]; dirs[i] = dirs[j]; dirs[j] = tmp;
+  }
+
+  for (const [dx, dy] of dirs) {
+    const tx = n.x + dx, ty = n.y + dy;
+
+    // must be a walkable floor tile
+    if (isWall(tx, ty)) continue;
+    if (map[ty]?.[tx] !== ".") continue;        // don't step onto stairs '>' etc
+    if (getEntityAt(tx, ty)) continue;
+    if (getNPCAt(tx, ty)) continue;
+    if (getItemAt(tx, ty)) continue;
+    if (tx === player.x && ty === player.y) continue;
+
+    n.x = tx; n.y = ty;
+    return true;
+  }
+  return false;
+}
+
 
   function tryMove(dx, dy) {
     if (gameOver || win) return false;
     const nx = player.x + dx, ny = player.y + dy;
     if (isWall(nx, ny)) { beep(100, 0.04, 0.10, "square"); return false; }
-    if (getNPCAt(nx, ny)) { log("An NPC blocks the path. Press T to talk.", "#ff9"); return false; }
+    const n = getNPCAt(nx, ny);
+if (n) {
+  // Let NPC step aside if possible (prevents corridor soft-lock)
+  if (tryNudgeNPC(n)) {
+    log(`${n.name} steps aside.`, n.color || "#ff9");
+    // continue movement (tile is now free)
+  } else {
+    log("An NPC blocks the path. Press T to talk.", "#ff9");
+    return false;
+  }
+}
+
 
     const e = getEntityAt(nx, ny);
     if (e && e.hp > 0) { attack(player, e); return true; }
