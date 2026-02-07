@@ -469,11 +469,38 @@ buttons = [
   }
 
   function onTouchStart(e) {
-    if (gameOver || win) return;
+  // On death/win, still allow MENU + menu option taps (restart/arcade/etc)
+  // but block movement, hotbar, dpad, etc.
+  const dead = (gameOver || win);
+
     e.preventDefault();
     if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 
     const t = getTouch(e.changedTouches[0]);
+        // If dead/win: only allow tapping MENU button + menu options
+    if (dead) {
+      // 1) Menu option taps when menu open
+      if (window.__mobileMenuRects && mobileMenuOpen) {
+        for (const r of window.__mobileMenuRects) {
+          if (t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h) {
+            keys[r.key] = true;
+            return;
+          }
+        }
+      }
+
+      // 2) Allow tapping the MENU circle itself to open/close
+      for (const b of buttons) {
+        if (b.id === "m" && Math.hypot(t.x - b.cx, t.y - b.cy) <= b.r) {
+          keys["m"] = true;
+          return;
+        }
+      }
+
+      // swallow all other touches while dead
+      return;
+    }
+
         // Inventory overlay taps (mobile)
     if (invOpen && invUIRects) {
       // hit helper
@@ -1200,11 +1227,10 @@ function useInventoryItem(index) {
  function playerTurn() {
   // If menu is open, only allow menu actions + toggles (M / I)
 if (mobileMenuOpen) {
-  if (!(keys["save"] || keys["load"] || keys["new"] || keys["arcade"] || keys["m"] || keys["i"])) {
+  if (!(keys["save"] || keys["load"] || keys["new"] || keys["n"] || keys["arcade"] || keys["m"] || keys["i"])) {
     return;
   }
 }
-
 
  // Inventory navigation (when open)
 if (invOpen) {
@@ -1709,12 +1735,14 @@ function drawDesktopMenuUI() {
   CTX.fillText("MENU", mx + 14, my + 14);
 
   const opts = [
-    { k:"save",   t:"SAVE (P)" },
-    { k:"load",   t:"LOAD (L)" },
-    { k:"new",    t:"NEW (N)"  },
-    { k:"i",      t:"INVENTORY (I)" },
-    { k:"arcade", t:"ARCADE" },
-  ];
+  { k:"save",   t:"SAVE" },
+  { k:"load",   t:"LOAD" },
+  { k:"new",    t:"NEW"  },
+  { k:"i",      t:"INVENTORY" },
+  { k:"n",      t:"RESTART" },
+  { k:"arcade", t:"ARCADE" },
+];
+
 
   const rowY0 = my + 44;
   const rowH = 36;
