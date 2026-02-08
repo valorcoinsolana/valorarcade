@@ -1951,6 +1951,28 @@ if (invOpen) {
   } else {
     drawText(px + 4, py + 2, "@", "#0f8");
   }
+  // --- Player HP bar ABOVE the sprite ---
+{
+  const w = TS - 4;
+  const hpw = Math.max(0, (w * (player.hp / player.maxhp)) | 0);
+
+  const barH = 5;
+  const barX = px + 2;
+
+  // keep bar inside visible world (don’t overlap top UI)
+  const worldTop = isMobile ? MOBILE_TOP_UI_H : 0;
+  let barY = py - (barH + 5);
+  barY = Math.max(worldTop + 2, barY);
+
+  // background
+  CTX.fillStyle = "rgba(0,0,0,0.6)";
+  CTX.fillRect(barX, barY, w, barH);
+
+  // ✅ green health fill
+  CTX.fillStyle = "rgba(0,255,120,0.9)";
+  CTX.fillRect(barX, barY, hpw, barH);
+}
+
   // --- Attack slash overlay (code-only) ---
 const atkMs = 110; // duration of slash
 const dt = nowMs - (player.attackAt || 0);
