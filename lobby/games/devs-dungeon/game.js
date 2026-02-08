@@ -557,8 +557,6 @@ function enemyFrames(ch) {
   }
 }
 
-}
-
   function resize() {
     W = C.width = Math.min(innerWidth, 1440);
     H = C.height = Math.min(innerHeight, 820);
