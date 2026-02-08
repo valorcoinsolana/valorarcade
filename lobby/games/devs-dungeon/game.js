@@ -744,12 +744,43 @@ stepAt: 0,          // timestamp of last step toggle
   }
 
   const ENEMY_TYPES = [
-    { name:"FUD Imp",     ch:"f", hp:10, atk:4, def:1, xp:14, color:"#f96" },
-    { name:"Rug Gremlin", ch:"r", hp:14, atk:5, def:2, xp:20, color:"#f66" },
-    { name:"Pump Fiend",  ch:"p", hp:12, atk:6, def:1, xp:22, color:"#6f6" },
-    { name:"Bot Swarm",   ch:"b", hp:9,  atk:3, def:0, xp:10, color:"#9cf" },
-    { name:"Whale Shade", ch:"w", hp:18, atk:7, def:3, xp:34, color:"#6ff" },
-  ];
+  // tier 0 (floors 1–4)
+  { name:"FUD Imp",     ch:"f", hp:10, atk:4, def:1, xp:14, color:"#f96", tier:0 },
+  { name:"Bot Swarm",   ch:"b", hp:9,  atk:3, def:0, xp:10, color:"#9cf", tier:0 },
+
+  // tier 1 (floor 5)
+  { name:"Rug Gremlin", ch:"r", hp:14, atk:5, def:2, xp:20, color:"#f66", tier:1 },
+
+  // tier 2 (floor 10)
+  { name:"Pump Fiend",  ch:"p", hp:12, atk:6, def:1, xp:22, color:"#6f6", tier:2 },
+
+  // tier 3 (floor 15)
+  { name:"Whale Shade", ch:"w", hp:18, atk:7, def:3, xp:34, color:"#6ff", tier:3 },
+
+  // ⬇️ keep adding one every 5 floors
+  // tier 4 → floor 20
+  // tier 5 → floor 25
+];
+
+  function pickEnemyTypeByFloor(floor) {
+  // which tiers are unlocked?
+  const maxTier = Math.floor((floor - 1) / 5);
+
+  // enemies allowed on this floor
+  const pool = ENEMY_TYPES.filter(e => e.tier <= maxTier);
+  if (!pool.length) return ENEMY_TYPES[0];
+
+  // weight newer enemies slightly higher
+  const weighted = [];
+  for (const e of pool) {
+    const w = 1 + (e.tier * 0.6); // newer = more common
+    for (let i = 0; i < w; i++) weighted.push(e);
+  }
+
+  return weighted[(Math.random() * weighted.length) | 0];
+}
+
+
 
   const ITEM_TYPES = [
     { name:"Health Potion", kind:"heal", amount: 14, ch:"!", color:"#ff6", hotbar:true },
@@ -900,8 +931,10 @@ stepAt: 0,          // timestamp of last step toggle
     for (let i = 0; i < enemyCount; i++) {
       const p = randomFloorTile();
       if (!p) break;
-      const t = ENEMY_TYPES[rand(0, ENEMY_TYPES.length - 1)];
-      const scale = 1 + (gameLevel - 1) * 0.06;
+      const t = pickEnemyTypeByFloor(gameLevel);
+      const g = gameLevel - 1;
+const scale = 1 + g * 0.05 + g * g * 0.001;
+
       const animPhase = (p.x * 7 + p.y * 13 + i * 3) | 0;
 
       entities.push({
