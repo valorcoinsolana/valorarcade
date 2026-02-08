@@ -1,28 +1,14 @@
+before we do quests, i am still not getting stair location on minimap after talking to meme lord. i want it to be a white square on the minimap, i also want it to show as a white square if the stairs are found by the player:
+
 (() => {
   "use strict";
-  window.addEventListener("error", (e) => {
-  try {
-    const c = document.getElementById("c");
-    if (!c) return;
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, c.width, c.height);
-    ctx.fillStyle = "#f55";
-    ctx.font = '16px monospace';
-    ctx.fillText("JS ERROR:", 20, 30);
-    ctx.fillStyle = "#fff";
-    ctx.fillText(String(e.message || e.error), 20, 55);
-    console.error(e.error || e.message);
-  } catch {}
-});
    window.__mobileMenuRects = null;
 
   // ======================
   // Part 0 - DOM + Canvas
   // ======================
   const C = document.getElementById("c");
-if (!C) throw new Error('Canvas #c not found');
-const CTX = C.getContext("2d", { alpha: false });
+  const CTX = C.getContext("2d", { alpha: false });
   CTX.imageSmoothingEnabled = false;
 
 
@@ -109,111 +95,17 @@ let invIndex = 0;
   // Inventory overlay touch hit-rects (set during drawInventoryOverlay)
 let invUIRects = null;     // { panel, close, use, rows:[{i,x,y,w,h}] }
 let invPageLines = 8;      // updated each frame from drawInventoryOverlay
+
+
+
   let audioCtx = null;
-    // ======================
-  // Gas: tactical + risk meter
-  // ======================
-  const GAS_CFG = {
-    move: 1,      // every successful step
-    attack: 3,    // when you swing at an enemy
-    wait: 1,      // "." wait costs gas too
-    min: 0
-  };
-
-  function clampGas() {
-    player.gas = Math.max(GAS_CFG.min, player.gas | 0);
-  }
-
-  function spendGas(amount, reason = "") {
-    if (!player) return true;
-    player.gas = (player.gas | 0) - (amount | 0);
-    clampGas();
-    return player.gas > 0;
-  }
-
-  function gasTier() {
-    const g = player.gas | 0;
-    // You can tune these thresholds
-    if (g <= 0) return 3;      // empty: critical
-    if (g <= 10) return 2;     // danger
-    if (g <= 25) return 1;     // low
-    return 0;                 // ok
-  }
-
-  function applyLowGasRisk() {
-    const tier = gasTier();
-    if (tier === 0) return;
-
-    // tier 1: low gas -> subtle pressure
-    if (tier === 1) {
-      // small chance to attract attention (more enemies aggro)
-      if (Math.random() < 0.12) {
-        for (const e of entities) {
-          if (e.hp > 0 && dist(e, player) <= 10) e.aggro = true;
-        }
-        log("Low gas… footsteps echo. Something notices you.", "#ff9");
-      }
-      return;
-    }
-
-    // tier 2: danger -> missteps can hurt
-    if (tier === 2) {
-      if (Math.random() < 0.18) {
-        const dmg = 1 + (Math.random() < 0.35 ? 1 : 0);
-        player.hp -= dmg;
-        log(`Gas fumes burn your lungs (-${dmg} HP).`, "#f66");
-        beep(140, 0.06, 0.12, "square");
-        if (player.hp <= 0) {
-          player.hp = 0;
-          gameOver = true;
-          log("You got rugged. GAME OVER.", "#f66");
-          mobileMenuOpen = isMobile;
-        }
-      }
-      return;
-    }
-
-    // tier 3: empty -> constant threat
-    if (tier === 3) {
-      // Every acted turn with 0 gas: small damage + nearby enemies instantly aggro
-      const dmg = 2;
-      player.hp -= dmg;
-      log(`Out of gas! The Abyss drains you (-${dmg} HP).`, "#f66");
-      beep(100, 0.07, 0.14, "square");
-
-      for (const e of entities) {
-        if (e.hp > 0 && dist(e, player) <= 12) e.aggro = true;
-      }
-
-      if (player.hp <= 0) {
-        player.hp = 0;
-        gameOver = true;
-        log("You got rugged. GAME OVER.", "#f66");
-        mobileMenuOpen = isMobile;
-      }
-    }
-  }
-
 
   // ======================
   // Part 2 - Utility
   // ======================
   const rand = (a, b) => (Math.random() * (b - a + 1) | 0) + a;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  function enemyCritChanceFromGas(gas) {
-  // normalize 0..1 where 1 = empty gas, 0 = safe gas
-  const t = clamp((GAS_SAFE - (gas | 0)) / GAS_SAFE, 0, 1);
-  return ENEMY_CRIT_MAX * t;
-}
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  // ======================
-// Gas Danger Meter tuning
-// ======================
-const GAS_SAFE = 120;   // at/above this: 0% crit
-const GAS_EMPTY = 0;    // at/near this: max crit
-const ENEMY_CRIT_MAX = 0.35; // 35% crit chance at 0 gas
-const ENEMY_CRIT_MULT = 1.6; // crit damage multiplier
-
 
   function beep(freq = 440, dur = 0.08, vol = 0.14, type = "sawtooth") {
     try {
@@ -502,28 +394,25 @@ function enemyFrames(ch) {
   const bottomTop = H - MOBILE_UI_H;
 
   // ----------------------
-  // 1) Right-side buttons: WAIT / TALK / MENU (anchored right)
+  // 1) Right-side buttons: WAIT / TALK / MENU (horizontal, anchored right)
   // ----------------------
+  const r = (buttons[0] ? buttons[0].r : 42);
   const pad = 14;
-  const gap = 10;
 
-  const bw = buttons[0]?.w || 80;
-  const bh = buttons[0]?.h || 40;
+  // place them near the bottom of the reserved UI zone
+  const btnY = H - r - pad;
+  const gap = (r * 2) + 12; // spacing between circle centers
 
-  const y = H - bh - pad;
-  let x = W - bw - pad;
+  const menuX = W - r - pad;
+  if (buttons[2]) { buttons[2].cx = menuX;         buttons[2].cy = btnY; } // MENU
+  if (buttons[1]) { buttons[1].cx = menuX - gap;   buttons[1].cy = btnY; } // TALK
+  if (buttons[0]) { buttons[0].cx = menuX - gap*2; buttons[0].cy = btnY; } // WAIT
 
-  for (let i = buttons.length - 1; i >= 0; i--) {
-    buttons[i].x = x;
-    buttons[i].y = y;
-    x -= bw + gap;
-  }
 
   // ----------------------
   // 2) Hotbar: shift right to avoid D-pad AND shrink if needed
   // ----------------------
   hotbarRects = [];
-
   const slots = 5;
   const hotPad = 10;
 
@@ -534,23 +423,27 @@ function enemyFrames(ch) {
 
   // available width for hotbar after avoiding D-pad
   const availW = Math.max(120, maxX - minX);
-
   let size = Math.floor((availW - (slots - 1) * hotPad) / slots);
+
+  // clamp so it doesn't get tiny or huge
   size = clamp(size, 40, 56);
 
   const totalW = slots * size + (slots - 1) * hotPad;
 
-  // center hotbar within available space (but never before minX)
-  const startX = minX + Math.max(0, ((availW - totalW) / 2) | 0);
-
   // hotbar sits near the TOP of the bottom UI zone
-  const hotbarY = bottomTop + 12;
+  const y = bottomTop + 12;
+
+  // startX tries to center within available space, but never enters D-pad area
+  let startX = minX + Math.max(0, (availW - totalW) / 2);
+
+  // final clamp to screen
+  startX = clamp(startX, 14, W - totalW - 14);
 
   for (let i = 0; i < slots; i++) {
     hotbarRects.push({
       slot: i,
       x: startX + i * (size + hotPad),
-      y: hotbarY,
+      y,
       w: size,
       h: size
     });
@@ -624,13 +517,11 @@ TS = Math.max(TS, 30);
 
 
     // Compressed mobile buttons
-    const bw = clamp((TS * 2.2) | 0, 64, 90);
-const bh = clamp((TS * 1.2) | 0, 34, 44);
-
+    const r = clamp((TS * 1.6) | 0, 30, 42); // smaller on small screens
 buttons = [
-  { id: ".", label: "WAIT", w: bw, h: bh },
-  { id: "t", label: "TALK", w: bw, h: bh },
-  { id: "m", label: "MENU", w: bw, h: bh },
+  { id: ".", label: "WAIT", r },
+  { id: "t", label: "TALK", r },
+  { id: "m", label: "MENU", r },
 ];
 
 
@@ -659,34 +550,27 @@ buttons = [
     const t = getTouch(e.changedTouches[0]);
         // If dead/win: only allow tapping MENU button + menu options
     if (dead) {
-  // 1) If menu is open, allow tapping menu option rows
-  if (window.__mobileMenuRects && mobileMenuOpen) {
-    for (const r of window.__mobileMenuRects) {
-      if (
-        t.x >= r.x && t.x <= r.x + r.w &&
-        t.y >= r.y && t.y <= r.y + r.h
-      ) {
-        keys[r.key] = true; // "new", "save", "load", "arcade", etc.
-        return;
+      // 1) Menu option taps when menu open
+      if (window.__mobileMenuRects && mobileMenuOpen) {
+        for (const r of window.__mobileMenuRects) {
+          if (t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h) {
+            keys[r.key] = true;
+            return;
+          }
+        }
       }
-    }
-  }
 
-  // 2) Always allow tapping the MENU button itself to open/close menu
-  for (const b of buttons) {
-    if (
-      b.id === "m" &&
-      t.x >= b.x && t.x <= b.x + b.w &&
-      t.y >= b.y && t.y <= b.y + b.h
-    ) {
-      keys["m"] = true;
+      // 2) Allow tapping the MENU circle itself to open/close
+      for (const b of buttons) {
+        if (b.id === "m" && Math.hypot(t.x - b.cx, t.y - b.cy) <= b.r) {
+          keys["m"] = true;
+          return;
+        }
+      }
+
+      // swallow all other touches while dead
       return;
     }
-  }
-
-  // 3) Swallow ALL other touches while dead/win
-  return;
-}
 
         // Inventory overlay taps (mobile)
     if (invOpen && invUIRects) {
@@ -735,13 +619,10 @@ buttons = [
 
     // Buttons (WAIT/TALK/MENU)
     for (const b of buttons) {
-      if (
-  t.x >= b.x && t.x <= b.x + b.w &&
-  t.y >= b.y && t.y <= b.y + b.h
-) {
-  keys[b.id] = true;
-  return;
-}
+      if (Math.hypot(t.x - b.cx, t.y - b.cy) <= b.r) {
+        keys[b.id] = true;
+        return;
+      }
     }
 
         // D-pad press
@@ -856,20 +737,10 @@ if (!player.stepAt) player.stepAt = 0;
       // --- migrate old inventory/hotbar items to stacks ---
 function normalizeStackEntry(s) {
   if (!s) return s;
-
-  // normalize renamed items
-  if (s.kind === "heal") s.name = "Liquidity Potion";
-  if (s.kind === "gas")  s.name = "Gas";
-  if (s.kind === "atk")  s.name = "New Coin Patch";
-  if (s.kind === "def")  s.name = "KYC Patch";
-  if (s.kind === "xp")   s.name = "Mining Pick-aXP";
-
   if (s.qty == null) s.qty = 1;
   if (s.max == null) s.max = stackMaxForKind(s.kind);
-
   return s;
 }
-
 
 if (player.inv && Array.isArray(player.inv)) {
   player.inv = player.inv.map(normalizeStackEntry);
@@ -922,7 +793,7 @@ if (player.hotbar && Array.isArray(player.hotbar)) {
     { name: "Solidity Dev", start: { hp: 35, maxhp: 35, atk: 8, def: 4, vision: 12 }, perk: "Audit: +1 vision" },
     { name: "Meme Degenerate", start: { hp: 28, maxhp: 28, atk: 10, def: 2, vision: 10 }, perk: "Pump: +20% XP sometimes" },
     { name: "Rug Survivor", start: { hp: 40, maxhp: 40, atk: 6, def: 5, vision: 11 }, perk: "Dodge: 15% chance avoid damage" },
-    { name: "Whale Apprentice", start: { hp: 32, maxhp: 32, atk: 7, def: 4, vision: 11 }, perk: "Whale: cheaper gas usage" },
+    { name: "Whale Apprentice", start: { hp: 32, maxhp: 32, atk: 7, def: 4, vision: 11 }, perk: "Whale: start with 200 Gas" },
   ];
 
   function chooseClass(idx) {
@@ -940,7 +811,7 @@ attackDir: "down",  // direction of last attack
       atk: cl.start.atk, def: cl.start.def,
       vision: cl.start.vision + (idx === 0 ? 1 : 0),
       lvl: 1, xp: 0, xpNext: 50,
-      gas: 50,
+      gas: (idx === 3) ? 200 : 0,
       rep: 0,
       className: cl.name,
       perk: cl.perk,
@@ -1036,11 +907,11 @@ attackDir: "down",  // direction of last attack
 
 
   const ITEM_TYPES = [
-    { name:"Liquidity Potion", kind:"heal", amount: 14, ch:"!", color:"#ff6", hotbar:true },
-    { name:"Gas",  kind:"gas",  amount: 60, ch:"$", color:"#0ff", hotbar:true },
-    { name:"New Coin Patch",  kind:"atk",  amount: 1,  ch:"+", color:"#f6f", hotbar:false },
-    { name:"KYC Patch", kind:"def",  amount: 1,  ch:"*", color:"#6ff", hotbar:false },
-    { name:"Mining Pick-aXP",    kind:"xp",   amount: 40, ch:"?", color:"#9f9", hotbar:true },
+    { name:"Health Potion", kind:"heal", amount: 14, ch:"!", color:"#ff6", hotbar:true },
+    { name:"Gas Canister",  kind:"gas",  amount: 60, ch:"$", color:"#0ff", hotbar:true },
+    { name:"Attack Patch",  kind:"atk",  amount: 1,  ch:"+", color:"#f6f", hotbar:false },
+    { name:"Defense Patch", kind:"def",  amount: 1,  ch:"*", color:"#6ff", hotbar:false },
+    { name:"Airdrop XP",    kind:"xp",   amount: 40, ch:"?", color:"#9f9", hotbar:true },
   ];
   // ======================
 // Stacking rules
@@ -1195,23 +1066,16 @@ function sameStack(a, b) {
   function getNPCAt(x, y) { return npcs.find(n => n.x === x && n.y === y) || null; }
   function getItemAt(x, y) { return items.find(it => it.x === x && it.y === y) || null; }
 
-  function randomFloorTileNoStairs() {
-  for (let i = 0; i < 3000; i++) {
-    const y = rand(1, map.length - 2);
-    const x = rand(1, map[0].length - 2);
-    if (
-      map[y][x] === "." &&
-      !getEntityAt(x, y) &&
-      !getNPCAt(x, y) &&
-      !getItemAt(x, y) &&
-      (x !== player.x || y !== player.y)
-    ) {
-      return { x, y };
+  function randomFloorTile() {
+    for (let i = 0; i < 3000; i++) {
+      const y = rand(1, map.length - 2);
+      const x = rand(1, map[0].length - 2);
+      if (map[y][x] === "." && !getEntityAt(x, y) && !getNPCAt(x, y) && !getItemAt(x, y) && (x !== player.x || y !== player.y)) {
+        return { x, y };
+      }
     }
+    return null;
   }
-  return null;
-}
-
 
   function spawnContent() {
     const enemyCount = clamp(6 + gameLevel * 2, 8, 40);
@@ -1251,14 +1115,12 @@ const scale = 1 + g * 0.05 + g * g * 0.001;
     }
 
     for (let i = 0; i < npcCount; i++) {
-  const p = randomFloorTileNoStairs();
-  if (!p) break;
-
-  const t = NPC_TYPES[rand(0, NPC_TYPES.length - 1)];
-  const animPhase = (p.x * 3 + p.y * 9 + i * 4) | 0;
-  npcs.push({ ...p, ...t, animPhase });
-}
-
+      const p = randomFloorTile();
+      if (!p) break;
+      const t = NPC_TYPES[rand(0, NPC_TYPES.length - 1)];
+      const animPhase = (p.x * 3 + p.y * 9 + i * 4) | 0;
+      npcs.push({ ...p, ...t, animPhase });
+    }
   }
 
   // ======================
@@ -1291,13 +1153,7 @@ const scale = 1 + g * 0.05 + g * g * 0.001;
     const r = player.vision;
     for (let y = Math.max(0, player.y - r - 1); y <= Math.min(map.length - 1, player.y + r + 1); y++) {
       for (let x = Math.max(0, player.x - r - 1); x <= Math.min(map[0].length - 1, player.x + r + 1); x++) {
-        if (isVisible(x, y)) {
-  explored[y][x] = true;
-
-  // ✅ if the stairs are visible, ensure they become explored for minimap marker
-  if (map[y]?.[x] === ">") explored[y][x] = true;
-}
-
+        if (isVisible(x, y)) explored[y][x] = true;
       }
     }
   }
@@ -1331,41 +1187,10 @@ const scale = 1 + g * 0.05 + g * g * 0.001;
   player.attackAt = performance.now();
   player.attackDir = player.facing;
 }
-    // Low gas makes you fight worse defensively (risk meter)
-let lowGasPenalty = 0;
-if (target === player) {
-  const tier = gasTier();
-  if (tier === 1) lowGasPenalty = 1;       // low
-  else if (tier === 2) lowGasPenalty = 2;  // danger
-  else if (tier === 3) lowGasPenalty = 3;  // empty
-}
-    let raw = Math.max(1, attacker.atk - target.def + rand(-1, 2));
-
-// Enemy crits scale with LOW gas
-let crit = false;
-if (target === player && attacker !== player) {
-  const pCrit = enemyCritChanceFromGas(player.gas);
-  if (Math.random() < pCrit) {
-    crit = true;
-    raw = Math.max(1, (raw * ENEMY_CRIT_MULT) | 0);
-  }
-}
-
-target.hp -= raw;
-
-if (attacker === player) {
-  log(`You hit ${target.name} for ${raw}.`, "#ff9");
-  beep(330, 0.05, 0.10);
-} else {
-  if (crit) {
-    log(`${attacker.name} CRITS you for ${raw}! (low gas)`, "#ff4");
-    beep(70, 0.10, 0.18, "square");
-  } else {
-    log(`${attacker.name} hits you for ${raw}.`, "#f66");
-    beep(160, 0.08, 0.14, "square");
-  }
-}
-
+    const raw = Math.max(1, attacker.atk - target.def + rand(-1, 2));
+    target.hp -= raw;
+    if (attacker === player) { log(`You hit ${target.name} for ${raw}.`, "#ff9"); beep(330, 0.05, 0.10); }
+    else { log(`${attacker.name} hits you for ${raw}.`, "#f66"); beep(160, 0.08, 0.14, "square"); }
 
     if (target.hp <= 0) {
       if (target === player) {
@@ -1593,8 +1418,6 @@ function useInventoryItem(index) {
     for (let x = 0; x < map[0].length; x++) {
       if (map[y][x] === ">") {
         explored[y][x] = true;
-        revealFog();     // refresh local visibility edges (optional but feels instant)
-updateUI();      // harmless; keeps UI synced
         log("Meme Lord leaks the stair coords 👀", "#9ff");
         return;
       }
@@ -1676,18 +1499,13 @@ function npcBlessing(n) {
 
     // must be a walkable floor tile
     if (isWall(tx, ty)) continue;
-    if (map[ty]?.[tx] === "#") continue; // walls only
+    if (map[ty]?.[tx] !== ".") continue;        // don't step onto stairs '>' etc
     if (getEntityAt(tx, ty)) continue;
     if (getNPCAt(tx, ty)) continue;
     if (getItemAt(tx, ty)) continue;
     if (tx === player.x && ty === player.y) continue;
 
     n.x = tx; n.y = ty;
-    // if NPC stepped onto stairs, immediately try to move again
-if (map[ty]?.[tx] === ">") {
-  return tryNudgeNPC(n);
-}
-
     return true;
   }
   return false;
@@ -1718,14 +1536,9 @@ if (n) {
 
 
     const e = getEntityAt(nx, ny);
-if (e && e.hp > 0) {
-  spendGas(GAS_CFG.attack, "attack");
-  attack(player, e);
-  return true;
-}
+    if (e && e.hp > 0) { attack(player, e); return true; }
 
     player.x = nx; player.y = ny;
-    spendGas(GAS_CFG.move, "move");
     // walk animation: flip frame on each successful move
 player.step ^= 1;
 player.stepAt = performance.now();
@@ -1811,7 +1624,6 @@ player.stepAt = performance.now();
   let lastActionAt = 0;
 
  function playerTurn() {
-   if (!player) return;   // ✅ prevents null hp crash
   // If menu is open, only allow menu actions + toggles (M / I)
 if (mobileMenuOpen) {
   if (!(keys["save"] || keys["load"] || keys["new"] || keys["n"] || keys["arcade"] || keys["m"] || keys["i"])) {
@@ -1933,25 +1745,19 @@ if (invOpen) {
   return;
 }
 
-if (keys["."]) {
-  keys["."] = false;
-  log("You wait.", "#aaa");
-  acted = true;
-}
+
+  if (keys["."]) { keys["."] = false; log("You wait.", "#aaa"); acted = true; }
 
   const mv = getMoveFromInput();
   if (!acted && mv) acted = tryMove(mv.dx, mv.dy);
 
   if (acted) {
-  lastActionAt = now;
-  // low gas effects apply on YOUR acted turns
-  applyLowGasRisk();
-  revealFog();
-  enemyTurn();
-  revealFog();
-  if (Math.random() < 0.06) saveGame();
-}
-
+    lastActionAt = now;
+    revealFog();
+    enemyTurn();
+    revealFog();
+    if (Math.random() < 0.06) saveGame();
+  }
 
   updateUI();
 }
@@ -1964,17 +1770,7 @@ if (keys["."]) {
     UI.xpNext.textContent = player.xpNext | 0;
     UI.atk.textContent = player.atk | 0;
     UI.def.textContent = player.def | 0;
-    const g = player.gas | 0;
-const pCrit = enemyCritChanceFromGas(g);
-UI.gas.textContent = g;
-
-// tint the GAS text by danger level
-if (UI.gas && UI.gas.style) {
-  if (pCrit >= 0.25) UI.gas.style.color = "#ff4";      // danger
-  else if (pCrit >= 0.12) UI.gas.style.color = "#ff9"; // warning
-  else UI.gas.style.color = "#0ff";                    // safe
-}
-
+    UI.gas.textContent = player.gas | 0;
     UI.rep.textContent = player.rep | 0;
     UI.floor.textContent = gameLevel | 0;
     UI.inv.textContent = (player.inv.length + player.hotbar.filter(Boolean).length) | 0;
@@ -2149,28 +1945,6 @@ if (UI.gas && UI.gas.style) {
   } else {
     drawText(px + 4, py + 2, "@", "#0f8");
   }
-  // --- Player HP bar ABOVE the sprite ---
-{
-  const w = TS - 4;
-  const hpw = Math.max(0, (w * (player.hp / player.maxhp)) | 0);
-
-  const barH = 5;
-  const barX = px + 2;
-
-  // keep bar inside visible world (don’t overlap top UI)
-  const worldTop = isMobile ? MOBILE_TOP_UI_H : 0;
-  let barY = py - (barH + 5);
-  barY = Math.max(worldTop + 2, barY);
-
-  // background
-  CTX.fillStyle = "rgba(0,0,0,0.6)";
-  CTX.fillRect(barX, barY, w, barH);
-
-  // ✅ green health fill
-  CTX.fillStyle = "rgba(0,255,120,0.9)";
-  CTX.fillRect(barX, barY, hpw, barH);
-}
-
   // --- Attack slash overlay (code-only) ---
 const atkMs = 110; // duration of slash
 const dt = nowMs - (player.attackAt || 0);
@@ -2291,24 +2065,11 @@ if (isMobile && !deathMenuShown) {
   const sy = mh / map.length;
 
   for (let y = 0; y < map.length; y++) for (let x = 0; x < map[0].length; x++) {
-  if (!explored[y][x]) continue;
-
-  const ch = map[y][x];
-
-  // base minimap shading
-  CTX.fillStyle = (ch === "#") ? "rgba(0,80,40,0.25)" : "rgba(0,255,120,0.10)";
-  CTX.fillRect(x0 + x * sx, y0 + y * sy, sx + 0.5, sy + 0.5);
-
-  // ✅ stairs marker (white square) once explored (by talk OR by walking nearby)
-  if (ch === ">") {
-    CTX.fillStyle = "rgba(255,255,255,0.95)";
-    // make it a bit chunkier than a single pixel
-    const px = x0 + x * sx;
-    const py = y0 + y * sy;
-    CTX.fillRect(px, py, Math.max(2, sx + 0.5), Math.max(2, sy + 0.5));
+    if (!explored[y][x]) continue;
+    const ch = map[y][x];
+    CTX.fillStyle = (ch === "#") ? "rgba(0,80,40,0.25)" : "rgba(0,255,120,0.10)";
+    CTX.fillRect(x0 + x * sx, y0 + y * sy, sx + 0.5, sy + 0.5);
   }
-}
-
 
   CTX.fillStyle = "rgba(0,255,180,0.9)";
   CTX.fillRect(x0 + player.x * sx - 1, y0 + player.y * sy - 1, 3, 3);
@@ -2702,18 +2463,12 @@ if (hasDpad) {
 
     // Right cluster (WAIT/TALK/MENU)
     for (const b of buttons) {
-     CTX.fillStyle = "rgba(0,255,120,0.10)";
-CTX.fillRect(b.x, b.y, b.w, b.h);
-
-CTX.strokeStyle = "rgba(0,255,120,0.28)";
-CTX.strokeRect(b.x, b.y, b.w, b.h);
-
-CTX.fillStyle = "rgba(0,255,180,0.9)";
-CTX.fillText(
-  b.label,
-  b.x + b.w / 2,
-  b.y + b.h / 2
-);
+      CTX.fillStyle = "rgba(0,255,120,0.08)";
+      CTX.beginPath(); CTX.arc(b.cx, b.cy, b.r, 0, Math.PI*2); CTX.fill();
+      CTX.strokeStyle = "rgba(0,255,120,0.22)";
+      CTX.beginPath(); CTX.arc(b.cx, b.cy, b.r, 0, Math.PI*2); CTX.stroke();
+      CTX.fillStyle = "rgba(0,255,160,0.75)";
+      CTX.fillText(b.label, b.cx, b.cy);
     }
 
    // Hotbar row (tap 1–5) — draw icon + qty
@@ -2841,25 +2596,21 @@ if (mobileMenuOpen && !invOpen) {
     ].forEach(l => log(l, "#ff9"));
   }
 
-  let turnTimer = null;
-async function init() {
-  await loadImages(ASSET);
+  async function init() {
+    await loadImages(ASSET);
 
-  // don’t auto-open debug overlay on mobile
-  if (!isMobile && GFX.missing.some(m => m.key === "floor" || m.key === "wall" || m.key === "stairsDown")) {
-    setArtDebugVisible(true);
-  }
-
-  if (!loadGame()) newGame();
-
-  revealFog();
-  updateUI();
-  render();
-
-  // ✅ start turns only after player exists
-  if (!turnTimer) turnTimer = setInterval(playerTurn, 40);
+    // don’t auto-open debug overlay on mobile
+    if (!isMobile && GFX.missing.some(m => m.key === "floor" || m.key === "wall" || m.key === "stairsDown")) {
+  setArtDebugVisible(true);
 }
 
-init();
-})();
 
+    if (!loadGame()) newGame();
+    revealFog();
+    updateUI();
+    render();
+  }
+
+  setInterval(playerTurn, 40);
+  init();
+})();
