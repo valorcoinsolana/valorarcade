@@ -93,10 +93,91 @@ let invIndex = 0;
   // Inventory overlay touch hit-rects (set during drawInventoryOverlay)
 let invUIRects = null;     // { panel, close, use, rows:[{i,x,y,w,h}] }
 let invPageLines = 8;      // updated each frame from drawInventoryOverlay
-
-
-
   let audioCtx = null;
+    // ======================
+  // Gas: tactical + risk meter
+  // ======================
+  const GAS_CFG = {
+    move: 1,      // every successful step
+    attack: 3,    // when you swing at an enemy
+    wait: 1,      // "." wait costs gas too
+    min: 0
+  };
+
+  function clampGas() {
+    player.gas = Math.max(GAS_CFG.min, player.gas | 0);
+  }
+
+  function spendGas(amount, reason = "") {
+    if (!player) return true;
+    player.gas = (player.gas | 0) - (amount | 0);
+    clampGas();
+    return player.gas > 0;
+  }
+
+  function gasTier() {
+    const g = player.gas | 0;
+    // You can tune these thresholds
+    if (g <= 0) return 3;      // empty: critical
+    if (g <= 10) return 2;     // danger
+    if (g <= 25) return 1;     // low
+    return 0;                 // ok
+  }
+
+  function applyLowGasRisk() {
+    const tier = gasTier();
+    if (tier === 0) return;
+
+    // tier 1: low gas -> subtle pressure
+    if (tier === 1) {
+      // small chance to attract attention (more enemies aggro)
+      if (Math.random() < 0.12) {
+        for (const e of entities) {
+          if (e.hp > 0 && dist(e, player) <= 10) e.aggro = true;
+        }
+        log("Low gas… footsteps echo. Something notices you.", "#ff9");
+      }
+      return;
+    }
+
+    // tier 2: danger -> missteps can hurt
+    if (tier === 2) {
+      if (Math.random() < 0.18) {
+        const dmg = 1 + (Math.random() < 0.35 ? 1 : 0);
+        player.hp -= dmg;
+        log(`Gas fumes burn your lungs (-${dmg} HP).`, "#f66");
+        beep(140, 0.06, 0.12, "square");
+        if (player.hp <= 0) {
+          player.hp = 0;
+          gameOver = true;
+          log("You got rugged. GAME OVER.", "#f66");
+          mobileMenuOpen = isMobile;
+        }
+      }
+      return;
+    }
+
+    // tier 3: empty -> constant threat
+    if (tier === 3) {
+      // Every acted turn with 0 gas: small damage + nearby enemies instantly aggro
+      const dmg = 2;
+      player.hp -= dmg;
+      log(`Out of gas! The Abyss drains you (-${dmg} HP).`, "#f66");
+      beep(100, 0.07, 0.14, "square");
+
+      for (const e of entities) {
+        if (e.hp > 0 && dist(e, player) <= 12) e.aggro = true;
+      }
+
+      if (player.hp <= 0) {
+        player.hp = 0;
+        gameOver = true;
+        log("You got rugged. GAME OVER.", "#f66");
+        mobileMenuOpen = isMobile;
+      }
+    }
+  }
+
 
   // ======================
   // Part 2 - Utility
@@ -1191,7 +1272,15 @@ const scale = 1 + g * 0.05 + g * g * 0.001;
   player.attackAt = performance.now();
   player.attackDir = player.facing;
 }
-    const raw = Math.max(1, attacker.atk - target.def + rand(-1, 2));
+    // Low gas makes you fight worse defensively (risk meter)
+let lowGasPenalty = 0;
+if (target === player) {
+  const tier = gasTier();
+  if (tier === 1) lowGasPenalty = 1;       // low
+  else if (tier === 2) lowGasPenalty = 2;  // danger
+  else if (tier === 3) lowGasPenalty = 3;  // empty
+}
+    const raw = Math.max(1, attacker.atk - (target.def - lowGasPenalty) + rand(-1, 2));
     target.hp -= raw;
     if (attacker === player) { log(`You hit ${target.name} for ${raw}.`, "#ff9"); beep(330, 0.05, 0.10); }
     else { log(`${attacker.name} hits you for ${raw}.`, "#f66"); beep(160, 0.08, 0.14, "square"); }
@@ -1542,9 +1631,14 @@ if (n) {
 
 
     const e = getEntityAt(nx, ny);
-    if (e && e.hp > 0) { attack(player, e); return true; }
+if (e && e.hp > 0) {
+  spendGas(GAS_CFG.attack, "attack");
+  attack(player, e);
+  return true;
+}
 
     player.x = nx; player.y = ny;
+    spendGas(GAS_CFG.move, "move");
     // walk animation: flip frame on each successful move
 player.step ^= 1;
 player.stepAt = performance.now();
@@ -1751,19 +1845,26 @@ if (invOpen) {
   return;
 }
 
-
-  if (keys["."]) { keys["."] = false; log("You wait.", "#aaa"); acted = true; }
+if (keys["."]) {
+  keys["."] = false;
+  spendGas(GAS_CFG.wait, "wait");
+  log("You wait.", "#aaa");
+  acted = true;
+}
 
   const mv = getMoveFromInput();
   if (!acted && mv) acted = tryMove(mv.dx, mv.dy);
 
   if (acted) {
-    lastActionAt = now;
-    revealFog();
-    enemyTurn();
-    revealFog();
-    if (Math.random() < 0.06) saveGame();
-  }
+  lastActionAt = now;
+  // low gas effects apply on YOUR acted turns
+  applyLowGasRisk();
+  revealFog();
+  enemyTurn();
+  revealFog();
+  if (Math.random() < 0.06) saveGame();
+}
+
 
   updateUI();
 }
