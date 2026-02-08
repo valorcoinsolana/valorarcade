@@ -801,6 +801,9 @@ if (player.hotbar && Array.isArray(player.hotbar)) {
       facing: "down",     // "up" | "down" | "left" | "right"
 step: 0,            // 0 or 1 (which walk frame)
 stepAt: 0,          // timestamp of last step toggle
+      attackAt: 0,        // timestamp of last attack
+attackDir: "down",  // direction of last attack
+
 
       hp: cl.start.hp, maxhp: cl.start.maxhp,
       atk: cl.start.atk, def: cl.start.def,
@@ -1178,6 +1181,10 @@ const scale = 1 + g * 0.05 + g * g * 0.001;
       beep(520, 0.05, 0.10, "triangle");
       return 0;
     }
+    if (attacker === player) {
+  player.attackAt = performance.now();
+  player.attackDir = player.facing;
+}
     const raw = Math.max(1, attacker.atk - target.def + rand(-1, 2));
     target.hp -= raw;
     if (attacker === player) { log(`You hit ${target.name} for ${raw}.`, "#ff9"); beep(330, 0.05, 0.10); }
@@ -1900,8 +1907,17 @@ if (invOpen) {
 
     // Player
 {
-  const px = ox + player.x * TS;
-  const py = oy + player.y * TS;
+    const shakeMs = 80;
+  const dts = nowMs - (player.attackAt || 0);
+  let shx = 0, shy = 0;
+  if (dts >= 0 && dts < shakeMs) {
+    shx = ((Math.random() * 2 - 1) * 2) | 0;
+    shy = ((Math.random() * 2 - 1) * 2) | 0;
+  }
+
+  const px = ox + player.x * TS + shx;
+  const py = oy + player.y * TS + shy;
+
 
   // --- Player shadow ---
   CTX.save();
@@ -1927,6 +1943,43 @@ if (invOpen) {
   } else {
     drawText(px + 4, py + 2, "@", "#0f8");
   }
+  // --- Attack slash overlay (code-only) ---
+const atkMs = 110; // duration of slash
+const dt = nowMs - (player.attackAt || 0);
+if (dt >= 0 && dt < atkMs) {
+  const t = 1 - (dt / atkMs); // fades out
+  CTX.save();
+  CTX.globalAlpha = 0.65 * t;
+  CTX.fillStyle = "rgba(0,255,200,1)";
+
+  // position slash one tile in front of player
+  let sx = px, sy = py;
+  if (player.attackDir === "up") sy -= TS;
+  else if (player.attackDir === "down") sy += TS;
+  else if (player.attackDir === "left") sx -= TS;
+  else if (player.attackDir === "right") sx += TS;
+
+  // draw a wedge-ish slash
+  CTX.translate(sx + TS/2, sy + TS/2);
+
+  let rot = 0;
+  if (player.attackDir === "up") rot = -Math.PI/2;
+  if (player.attackDir === "down") rot = Math.PI/2;
+  if (player.attackDir === "left") rot = Math.PI;
+  if (player.attackDir === "right") rot = 0;
+  CTX.rotate(rot);
+
+  // simple “arc” slash
+  CTX.beginPath();
+  CTX.moveTo(-TS*0.2, -TS*0.35);
+  CTX.lineTo(TS*0.45, 0);
+  CTX.lineTo(-TS*0.2, TS*0.35);
+  CTX.closePath();
+  CTX.fill();
+
+  CTX.restore();
+}
+
 }
         // ===== UI overlays (minimap + menu + controls) =====
     // world is clipped on mobile; UI should draw OUTSIDE the clip
