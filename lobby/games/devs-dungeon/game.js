@@ -1,5 +1,3 @@
-before we do quests, i am still not getting stair location on minimap after talking to meme lord. i want it to be a white square on the minimap, i also want it to show as a white square if the stairs are found by the player:
-
 (() => {
   "use strict";
    window.__mobileMenuRects = null;
