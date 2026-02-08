@@ -986,11 +986,11 @@ attackDir: "down",  // direction of last attack
 
 
   const ITEM_TYPES = [
-    { name:"Health Potion", kind:"heal", amount: 14, ch:"!", color:"#ff6", hotbar:true },
-    { name:"Gas Canister",  kind:"gas",  amount: 60, ch:"$", color:"#0ff", hotbar:true },
-    { name:"Attack Patch",  kind:"atk",  amount: 1,  ch:"+", color:"#f6f", hotbar:false },
-    { name:"Defense Patch", kind:"def",  amount: 1,  ch:"*", color:"#6ff", hotbar:false },
-    { name:"Airdrop XP",    kind:"xp",   amount: 40, ch:"?", color:"#9f9", hotbar:true },
+    { name:"Liquidity Potion", kind:"heal", amount: 14, ch:"!", color:"#ff6", hotbar:true },
+    { name:"Gas",  kind:"gas",  amount: 60, ch:"$", color:"#0ff", hotbar:true },
+    { name:"New Coin Patch",  kind:"atk",  amount: 1,  ch:"+", color:"#f6f", hotbar:false },
+    { name:"KYC Patch", kind:"def",  amount: 1,  ch:"*", color:"#6ff", hotbar:false },
+    { name:"Mining Pick-aXP",    kind:"xp",   amount: 40, ch:"?", color:"#9f9", hotbar:true },
   ];
   // ======================
 // Stacking rules
