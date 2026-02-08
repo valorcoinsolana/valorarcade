@@ -542,6 +542,16 @@ function enemyFrames(ch) {
       h: size
     });
   }
+    // Cache tight box rects for WAIT/TALK/MENU (used for draw + hit-test)
+  for (const b of buttons) {
+    const s = (b.r * 2) | 0; // square side length
+    b.rect = {
+      x: (b.cx - s / 2) | 0,
+      y: (b.cy - s / 2) | 0,
+      w: s,
+      h: s
+    };
+  }
 }
 
   function resize() {
@@ -654,13 +664,13 @@ buttons = [
         }
       }
 
-      // 2) Allow tapping the MENU circle itself to open/close
-      for (const b of buttons) {
-        if (b.id === "m" && Math.hypot(t.x - b.cx, t.y - b.cy) <= b.r) {
-          keys["m"] = true;
-          return;
-        }
-      }
+      // 2) Allow tapping the MENU box itself to open/close
+for (const b of buttons) {
+  if (b.id === "m" && pointInRect(t.x, t.y, b.rect)) {
+    keys["m"] = true;
+    return;
+  }
+}
 
       // swallow all other touches while dead
       return;
@@ -711,13 +721,13 @@ buttons = [
       }
     }
 
-    // Buttons (WAIT/TALK/MENU)
-    for (const b of buttons) {
-      if (Math.hypot(t.x - b.cx, t.y - b.cy) <= b.r) {
-        keys[b.id] = true;
-        return;
-      }
-    }
+    // Buttons (WAIT/TALK/MENU) - tight boxes
+for (const b of buttons) {
+  if (pointInRect(t.x, t.y, b.rect)) {
+    keys[b.id] = true;
+    return;
+  }
+}
 
         // D-pad press
     if (dpadRects) {
@@ -773,6 +783,10 @@ buttons = [
 function inRect(p, r) {
   return r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 }
+  function pointInRect(px, py, r) {
+  return r && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
 
 C.addEventListener("mousedown", (e) => {
   const p = getMouse(e);
@@ -2654,15 +2668,20 @@ if (hasDpad) {
     CTX.textAlign = "center";
     CTX.textBaseline = "middle";
 
-    // Right cluster (WAIT/TALK/MENU)
-    for (const b of buttons) {
-      CTX.fillStyle = "rgba(0,255,120,0.08)";
-      CTX.beginPath(); CTX.arc(b.cx, b.cy, b.r, 0, Math.PI*2); CTX.fill();
-      CTX.strokeStyle = "rgba(0,255,120,0.22)";
-      CTX.beginPath(); CTX.arc(b.cx, b.cy, b.r, 0, Math.PI*2); CTX.stroke();
-      CTX.fillStyle = "rgba(0,255,160,0.75)";
-      CTX.fillText(b.label, b.cx, b.cy);
-    }
+    // Right cluster (WAIT/TALK/MENU) - tight boxes
+for (const b of buttons) {
+  const r = b.rect || { x: b.cx - b.r, y: b.cy - b.r, w: b.r * 2, h: b.r * 2 };
+
+  CTX.fillStyle = "rgba(0,255,120,0.08)";
+  CTX.fillRect(r.x, r.y, r.w, r.h);
+
+  CTX.strokeStyle = "rgba(0,255,120,0.22)";
+  CTX.strokeRect(r.x, r.y, r.w, r.h);
+
+  CTX.fillStyle = "rgba(0,255,160,0.75)";
+  CTX.fillText(b.label, r.x + r.w / 2, r.y + r.h / 2);
+}
+
 
    // Hotbar row (tap 1–5) — draw icon + qty
 for (let i = 0; i < hotbarRects.length; i++) {
