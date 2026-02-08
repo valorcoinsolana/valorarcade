@@ -2480,7 +2480,10 @@ if (mobileMenuOpen && !invOpen) {
     await loadImages(ASSET);
 
     // don’t auto-open debug overlay on mobile
-    if (!isMobile && GFX.missing.length) setArtDebugVisible(true);
+    if (!isMobile && GFX.missing.some(m => m.key === "floor" || m.key === "wall" || m.key === "stairsDown")) {
+  setArtDebugVisible(true);
+}
+
 
     if (!loadGame()) newGame();
     revealFog();
