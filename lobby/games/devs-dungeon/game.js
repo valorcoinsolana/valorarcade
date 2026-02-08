@@ -884,26 +884,17 @@ function sameStack(a, b) {
 
 
   const NPC_TYPES = [
-  {
-    name:"Meme Lord",
-    ch:"M",
-    color:"#ff9",
+  { name:"Meme Lord",  ch:"M", color:"#ff9",
     role:"lore",
-    lines:[...]
+    lines:["GM. Your bags are heavy.","Diamond hands or NGMI.","I sold the top (I didn't)."]
   },
-  {
-    name:"Bagholder",
-    ch:"B",
-    color:"#ccc",
+  { name:"Bagholder",  ch:"B", color:"#ccc",
     role:"trader",
-    lines:[...]
+    lines:["It's not a loss if I don't sell.","My portfolio is a museum.","I trust the dev (I am the dev)."]
   },
-  {
-    name:"Ape Priest",
-    ch:"A",
-    color:"#9ff",
+  { name:"Ape Priest", ch:"A", color:"#9ff",
     role:"buffer",
-    lines:[...]
+    lines:["Ape together strong.","Buy high, sell... never.","WAGMI, but pay the gas."]
   },
 ];
 
