@@ -1168,16 +1168,23 @@ function sameStack(a, b) {
   function getNPCAt(x, y) { return npcs.find(n => n.x === x && n.y === y) || null; }
   function getItemAt(x, y) { return items.find(it => it.x === x && it.y === y) || null; }
 
-  function randomFloorTile() {
-    for (let i = 0; i < 3000; i++) {
-      const y = rand(1, map.length - 2);
-      const x = rand(1, map[0].length - 2);
-      if (map[y][x] === "." && !getEntityAt(x, y) && !getNPCAt(x, y) && !getItemAt(x, y) && (x !== player.x || y !== player.y)) {
-        return { x, y };
-      }
+  function randomFloorTileNoStairs() {
+  for (let i = 0; i < 3000; i++) {
+    const y = rand(1, map.length - 2);
+    const x = rand(1, map[0].length - 2);
+    if (
+      map[y][x] === "." &&
+      !getEntityAt(x, y) &&
+      !getNPCAt(x, y) &&
+      !getItemAt(x, y) &&
+      (x !== player.x || y !== player.y)
+    ) {
+      return { x, y };
     }
-    return null;
   }
+  return null;
+}
+
 
   function spawnContent() {
     const enemyCount = clamp(6 + gameLevel * 2, 8, 40);
@@ -1217,12 +1224,14 @@ const scale = 1 + g * 0.05 + g * g * 0.001;
     }
 
     for (let i = 0; i < npcCount; i++) {
-      const p = randomFloorTile();
-      if (!p) break;
-      const t = NPC_TYPES[rand(0, NPC_TYPES.length - 1)];
-      const animPhase = (p.x * 3 + p.y * 9 + i * 4) | 0;
-      npcs.push({ ...p, ...t, animPhase });
-    }
+  const p = randomFloorTileNoStairs();
+  if (!p) break;
+
+  const t = NPC_TYPES[rand(0, NPC_TYPES.length - 1)];
+  const animPhase = (p.x * 3 + p.y * 9 + i * 4) | 0;
+  npcs.push({ ...p, ...t, animPhase });
+}
+
   }
 
   // ======================
@@ -1640,13 +1649,18 @@ function npcBlessing(n) {
 
     // must be a walkable floor tile
     if (isWall(tx, ty)) continue;
-    if (map[ty]?.[tx] !== ".") continue;        // don't step onto stairs '>' etc
+    if (map[ty]?.[tx] === "#") continue; // walls only
     if (getEntityAt(tx, ty)) continue;
     if (getNPCAt(tx, ty)) continue;
     if (getItemAt(tx, ty)) continue;
     if (tx === player.x && ty === player.y) continue;
 
     n.x = tx; n.y = ty;
+    // if NPC stepped onto stairs, immediately try to move again
+if (map[ty]?.[tx] === ">") {
+  return tryNudgeNPC(n);
+}
+
     return true;
   }
   return false;
