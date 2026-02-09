@@ -1274,9 +1274,59 @@ function sameStack(a, b) {
 
     const nm = FLOOR_NAMES[(gameLevel - 1) % FLOOR_NAMES.length];
     log(`Floor ${gameLevel}: ${nm} — gas fees rising…`, "#f96");
-  }
 
-  function getEntityAt(x, y) { return entities.find(e => e.x === x && e.y === y && e.hp > 0) || null; }
+    spawnContent();
+for (const n of npcs) n.usedThisFloor = false;
+
+const nm = FLOOR_NAMES[(gameLevel - 1) % FLOOR_NAMES.length];
+log(`Floor ${gameLevel}: ${nm} — gas fees rising…`, "#f96");
+  }
+}
+ function entityFootprint(e) {
+  if (!e) return 1;
+  if (e.kind === "boss") return 4;      // 4x4 tiles
+  if (e.kind === "miniboss") return 2;  // 2x2 tiles
+  return 1;
+}
+
+function entityBlocksTile(e, tx, ty) {
+  if (!e || e.hp <= 0) return false;
+
+  const s = entityFootprint(e);
+  if (s === 1) return e.x === tx && e.y === ty;
+
+  // centered footprint, matching your centered drawing
+  const half = Math.floor(s / 2);
+  const left = e.x - half;
+  const top  = e.y - half;
+  const right = left + s - 1;
+  const bottom = top + s - 1;
+
+  return tx >= left && tx <= right && ty >= top && ty <= bottom;
+}
+
+function getBlockingEntityAt(x, y) {
+  return entities.find(e => entityBlocksTile(e, x, y)) || null;
+}
+function footprintFitsAt(cx, cy, size) {
+  const half = Math.floor(size / 2);
+  const left = cx - half, top = cy - half;
+  const right = left + size - 1, bottom = top + size - 1;
+
+  for (let y = top; y <= bottom; y++) {
+    for (let x = left; x <= right; x++) {
+      if (isWall(x, y)) return false;
+      if (map[y]?.[x] !== ".") return false;
+      if (getNPCAt(x, y) || getItemAt(x, y)) return false;
+      // IMPORTANT: don't call getEntityAt here (it will self-block during placement)
+    }
+  }
+  return true;
+}
+
+  function getEntityAt(x, y) {
+  return getBlockingEntityAt(x, y);
+}
   function getNPCAt(x, y) { return npcs.find(n => n.x === x && n.y === y) || null; }
   function getItemAt(x, y) { return items.find(it => it.x === x && it.y === y) || null; }
 
@@ -1303,7 +1353,12 @@ const doBoss = (gameLevel % 20 === 0);
 const doMini = (!doBoss && (gameLevel % 5 === 0));
 
 if (doBoss) {
-  const p = randomFloorTile();
+  let p = null;
+for (let tries = 0; tries < 400; tries++) {
+  const cand = randomFloorTile();
+  if (!cand) break;
+  if (footprintFitsAt(cand.x, cand.y, 4)) { p = cand; break; }
+}
   if (p) {
     const t = bossForFloor(gameLevel);
     const g = gameLevel - 1;
@@ -1330,7 +1385,12 @@ if (doBoss) {
 }
 
 if (doMini) {
-  const p = randomFloorTile();
+  let p = null;
+for (let tries = 0; tries < 400; tries++) {
+  const cand = randomFloorTile();
+  if (!cand) break;
+  if (footprintFitsAt(cand.x, cand.y, 2)) { p = cand; break; }
+}
   if (p) {
     const t = miniBossForFloor(gameLevel);
     const g = gameLevel - 1;
