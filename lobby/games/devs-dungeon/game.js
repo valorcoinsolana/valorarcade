@@ -2391,6 +2391,23 @@ if (UI.gas && UI.gas.style) {
     CTX.textAlign = align;
     CTX.fillText(s, x, y);
   }
+  function wrapTextLines(ctx, text, maxW) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let line = "";
+
+  for (const w of words) {
+    const test = line ? (line + " " + w) : w;
+    if (ctx.measureText(test).width <= maxW) {
+      line = test;
+    } else {
+      if (line) lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
 
   function render() {
     const nowMs = performance.now();
@@ -2699,61 +2716,68 @@ if (!isMobile) drawDesktopHotbar();
     if (logOpen) drawLogOverlay();
 
 
-    // Mobile controls (dpad/hotbar/buttons/menu overlay)
-    if (isMobile) drawMobileControls();
-    // Game over / win overlay (mobile-friendly)
+    // Game over / win overlay (draw BEHIND menu)
 if (gameOver || win) {
-  const w = Math.min(520, W - 40);
-  const h = 170;
-  const x = (W - w) / 2;
-  // Game over / win overlay (mobile-friendly)
-if (gameOver || win) {
-  const w = Math.min(520, W - 40);
-  const h = 170;
-  const x = (W - w) / 2;
-
-  // Default position
-  let y = isMobile ? (MOBILE_TOP_UI_H + 18) : 80;
-
-  // ✅ On mobile: if the menu is open, keep the GAME OVER panel ABOVE it
-  if (isMobile && mobileMenuOpen) {
-    const menuW = 260;
-    const rowH = 40;
-    const menuOpts = 6; // SAVE, LOAD, NEW, LOG, INVENTORY, ARCADE (matches your opts array)
-    const menuH = 44 + menuOpts * rowH + 12;
-    const menuY = H - MOBILE_UI_H - menuH - 14;
-
-    // put overlay above menu with a gap
-    y = Math.min(y, menuY - h - 12);
-
-    // clamp so it never goes above the top UI
-    y = Math.max(MOBILE_TOP_UI_H + 10, y);
-  }
-
-  CTX.fillStyle = "rgba(0,0,0,0.72)";
-  CTX.fillRect(x, y, w, h);
-  CTX.strokeStyle = "rgba(0,255,120,0.25)";
-  CTX.strokeRect(x, y, w, h);
-
-  CTX.textAlign = "center";
-  CTX.textBaseline = "top";
-  CTX.fillStyle = "rgba(0,255,180,0.9)";
-  CTX.font = `bold 22px "Courier New", monospace`;
-  CTX.fillText(win ? "YOU WIN" : "GAME OVER", x + w/2, y + 16);
-
-  CTX.fillStyle = "rgba(200,200,200,0.85)";
-  CTX.font = `16px "Courier New", monospace`;
-  CTX.fillText("Tap MENU to load / restart / save / arcade", x + w/2, y + 60);
-
   // force menu visible on mobile ONCE so player sees options immediately
   if (isMobile && !deathMenuShown) {
     mobileMenuOpen = true;
     deathMenuShown = true;
   }
 
+  const topSafe = isMobile ? MOBILE_TOP_UI_H : 0;
+  const bottomSafe = isMobile ? MOBILE_UI_H : 0;
+
+  const w = Math.min(520, W - 24);
+  const x = (W - w) / 2;
+
+  // keep it in the safe world strip (above the bottom controls)
+  const y = topSafe + 12;
+  const h = 120;
+
+  // panel
+  CTX.save();
+  CTX.fillStyle = "rgba(0,0,0,0.75)";
+  CTX.fillRect(x, y, w, h);
+  CTX.strokeStyle = "rgba(0,255,120,0.25)";
+  CTX.strokeRect(x, y, w, h);
+
+  // clip so text can NEVER spill outside
+  CTX.beginPath();
+  CTX.rect(x, y, w, h);
+  CTX.clip();
+
+  // title
+  CTX.textAlign = "center";
+  CTX.textBaseline = "top";
+  CTX.fillStyle = "rgba(0,255,180,0.92)";
+  CTX.font = `bold 22px "Courier New", monospace`;
+  CTX.fillText(win ? "YOU WIN" : "GAME OVER", x + w / 2, y + 12);
+
+  // wrapped hint
+  CTX.fillStyle = "rgba(200,200,200,0.88)";
+  CTX.font = `16px "Courier New", monospace`;
+
+  const msg = isMobile
+    ? "Tap MENU to load / restart / save / arcade"
+    : "Press M to open MENU (load / restart / save / arcade)";
+
+  const lines = wrapTextLines(CTX, msg, w - 24);
+  let ty = y + 52;
+  for (const line of lines.slice(0, 3)) {
+    CTX.fillText(line, x + w / 2, ty);
+    ty += 18;
+  }
+
+  CTX.restore();
+
+  // restore defaults
   CTX.textAlign = "left";
   CTX.textBaseline = "top";
 }
+
+// Mobile controls (dpad/hotbar/buttons/menu overlay) — draw AFTER the banner so menu is on top
+if (isMobile) drawMobileControls();
+
 
 
   CTX.fillStyle = "rgba(0,0,0,0.72)";
