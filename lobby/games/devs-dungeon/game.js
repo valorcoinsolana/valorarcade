@@ -1274,13 +1274,6 @@ function sameStack(a, b) {
 
     const nm = FLOOR_NAMES[(gameLevel - 1) % FLOOR_NAMES.length];
     log(`Floor ${gameLevel}: ${nm} — gas fees rising…`, "#f96");
-
-    spawnContent();
-for (const n of npcs) n.usedThisFloor = false;
-
-const nm = FLOOR_NAMES[(gameLevel - 1) % FLOOR_NAMES.length];
-log(`Floor ${gameLevel}: ${nm} — gas fees rising…`, "#f96");
-  }
 }
  function entityFootprint(e) {
   if (!e) return 1;
