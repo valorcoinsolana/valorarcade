@@ -2240,9 +2240,24 @@ if (invOpen) {
   }
 
   // optional: allow save/load even on death screen
-  if (keys["save"]) { keys["save"] = false; saveGame(); }
-  if (keys["load"]) { keys["load"] = false; if (!loadGame()) log("No save found.", "#aaa"); }
+   // allow save/load even on death screen (menu buttons OR keyboard)
+  if (keys["p"] || keys["save"]) {
+    keys["p"] = false;
+    keys["save"] = false;
+    saveGame();
+  }
 
+  if (keys["l"] || keys["load"]) {
+    keys["l"] = false;
+    keys["load"] = false;
+    if (!loadGame()) log("No save found.", "#aaa");
+    else {
+      // optional: close menu after successful load
+      mobileMenuOpen = false;
+      gameOver = false;
+      win = false;
+    }
+  }
   return;
 }
 
@@ -2689,7 +2704,7 @@ if (gameOver || win) {
 
   CTX.fillStyle = "rgba(200,200,200,0.85)";
   CTX.font = `16px "Courier New", monospace`;
-  CTX.fillText("Tap MENU to restart / save / arcade", x + w/2, y + 60);
+  CTX.fillText(isMobile ? "Tap MENU to load / restart / save / arcade" : "Press M (menu) or L (load)", x + w/2, y + 60);
 
   // force menu visible on mobile ONCE so player sees options immediately
 if (isMobile && !deathMenuShown) {
