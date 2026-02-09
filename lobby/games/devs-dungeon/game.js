@@ -279,7 +279,21 @@ playerR: ["assets/tiles/player_r_0.png", "assets/tiles/player_r_1.png"],
     enemyY: ["assets/tiles/enemy_finality_phantom_0.png","assets/tiles/enemy_finality_phantom_1.png"],
     enemyQ: ["assets/tiles/enemy_black_swan_entity_0.png","assets/tiles/enemy_black_swan_entity_1.png"],
     enemyG2: ["assets/tiles/enemy_genesis_parasite_0.png","assets/tiles/enemy_genesis_parasite_1.png"],
-
+        // Mini-bosses (64x64 source)
+miniBoss_gas_warden:       ["assets/tiles/miniboss_gas_warden_0.png","assets/tiles/miniboss_gas_warden_1.png"],
+miniBoss_slippage_brute:   ["assets/tiles/miniboss_slippage_brute_0.png","assets/tiles/miniboss_slippage_brute_1.png"],
+miniBoss_liquidity_reaper: ["assets/tiles/miniboss_liquidity_reaper_0.png","assets/tiles/miniboss_liquidity_reaper_1.png"],
+miniBoss_oracle_breaker:   ["assets/tiles/miniboss_oracle_breaker_0.png","assets/tiles/miniboss_oracle_breaker_1.png"],
+miniBoss_mev_enforcer:     ["assets/tiles/miniboss_mev_enforcer_0.png","assets/tiles/miniboss_mev_enforcer_1.png"],
+miniBoss_consensus_crusher:["assets/tiles/miniboss_consensus_crusher_0.png","assets/tiles/miniboss_consensus_crusher_1.png"],
+miniBoss_finality_ravager: ["assets/tiles/miniboss_finality_ravager_0.png","assets/tiles/miniboss_finality_ravager_1.png"],
+miniBoss_black_swan_herald:["assets/tiles/miniboss_black_swan_herald_0.png","assets/tiles/miniboss_black_swan_herald_1.png"],
+// Bosses (128x128 source)
+boss_rugpull_architect: ["assets/tiles/boss_rugpull_architect_0.png","assets/tiles/boss_rugpull_architect_1.png"],
+boss_mev_hydra:         ["assets/tiles/boss_mev_hydra_0.png","assets/tiles/boss_mev_hydra_1.png"],
+boss_oracle_of_ruin:    ["assets/tiles/boss_oracle_of_ruin_0.png","assets/tiles/boss_oracle_of_ruin_1.png"],
+boss_finality_engine:   ["assets/tiles/boss_finality_engine_0.png","assets/tiles/boss_finality_engine_1.png"],
+boss_genesis_parasite:  ["assets/tiles/boss_genesis_parasite_0.png","assets/tiles/boss_genesis_parasite_1.png"],
 
     // Items
     itemPotion: ["assets/tiles/item_potion_0.png","assets/tiles/item_potion_1.png"],
@@ -287,7 +301,6 @@ playerR: ["assets/tiles/player_r_0.png", "assets/tiles/player_r_1.png"],
     itemAtk:    ["assets/tiles/item_atk_0.png","assets/tiles/item_atk_1.png"],
     itemDef:    ["assets/tiles/item_def_0.png","assets/tiles/item_def_1.png"],
     itemXp:     ["assets/tiles/item_xp_0.png","assets/tiles/item_xp_1.png"],
-
     // NPCs
     npcM:   ["assets/tiles/npc_meme_lord_0.png","assets/tiles/npc_meme_lord_1.png"],
     npcBag: ["assets/tiles/npc_bagholder_0.png","assets/tiles/npc_bagholder_1.png"],
@@ -432,7 +445,6 @@ playerR: ["assets/tiles/player_r_0.png", "assets/tiles/player_r_1.png"],
   p: "enemyP",
   b: "enemyB",
   w: "enemyW",
-
   g: "enemyG",
   l: "enemyL",
   o: "enemyO",
@@ -448,9 +460,23 @@ playerR: ["assets/tiles/player_r_0.png", "assets/tiles/player_r_1.png"],
   c: "enemyC",
   y: "enemyY",
   q: "enemyQ",
-
   // capital G enemy (Genesis Parasite)
   G: "enemyG2",
+     // Mini-boss symbols → specific named art keys
+"µ": "miniBoss_gas_warden",
+"¶": "miniBoss_slippage_brute",
+"ß": "miniBoss_liquidity_reaper",
+"Ø": "miniBoss_oracle_breaker",
+"ƒ": "miniBoss_mev_enforcer",
+"¢": "miniBoss_consensus_crusher",
+"§": "miniBoss_finality_ravager",
+"¤": "miniBoss_black_swan_herald",
+// Boss symbols → specific named art keys
+"Ω": "boss_rugpull_architect",
+"Ψ": "boss_mev_hydra",
+"Σ": "boss_oracle_of_ruin",
+"Λ": "boss_finality_engine",
+"Ξ": "boss_genesis_parasite",
 };
 
 function enemyFrames(ch) {
@@ -458,6 +484,19 @@ function enemyFrames(ch) {
   return key ? GFX.frames[key] : null;
 }
 
+  function enemySpriteInfo(e) {
+  // frames come ONLY from ch->asset mapping (name-based keys)
+  const frames = enemyFrames(e.ch);
+
+  // defaults
+  let src = SPRITE_SRC;
+  let scale = 1;
+
+  if (e.kind === "miniboss") { src = 64;  scale = 2; }
+  else if (e.kind === "boss") { src = 128; scale = 4; }
+
+  return { frames, src, scale };
+}
   function itemFrames(ch) {
     if (ch === "!") return GFX.frames.itemPotion;
     if (ch === "$") return GFX.frames.itemGas;
@@ -1001,7 +1040,40 @@ attackDir: "down",  // direction of last attack
   // ───────── Tier 19 (Floor 95–100)
   { name:"Genesis Parasite", ch:"G", hp:52, atk:22, def:10, xp:180, color:"#fff", tier:19 },
 ];
+  // ======================
+// Boss / Mini-boss tables
+// ======================
 
+// Mini-boss every 5 floors (bigger: 64x64px art later)
+const MINI_BOSS_TYPES = [
+  { name:"Gas Warden",        ch:"µ", hp:55, atk:9,  def:3, xp:110, color:"#ff9" }, // 5–9
+  { name:"Slippage Brute",    ch:"¶", hp:60, atk:10, def:4, xp:120, color:"#ff9" }, // 10–14
+  { name:"Liquidity Reaper",  ch:"ß", hp:65, atk:11, def:4, xp:130, color:"#ff9" }, // 15–19
+  { name:"Oracle Breaker",    ch:"Ø", hp:70, atk:12, def:5, xp:145, color:"#ff9" }, // 20–24
+  { name:"MEV Enforcer",      ch:"ƒ", hp:75, atk:13, def:5, xp:160, color:"#ff9" }, // 25–29
+  { name:"Consensus Crusher", ch:"¢", hp:80, atk:14, def:6, xp:180, color:"#ff9" }, // 30–34
+  { name:"Finality Ravager",  ch:"§", hp:85, atk:15, def:6, xp:200, color:"#ff9" }, // 35–39
+  { name:"Black Swan Herald", ch:"¤", hp:90, atk:16, def:7, xp:220, color:"#ff9" }, // 40–44
+];
+
+// Boss every 20 floors (bigger: 128x128px art later)
+const BOSS_TYPES = [
+  { name:"The Rugpull Architect", ch:"Ω", hp:160, atk:16, def:8,  xp:420,  color:"#fff" }, // 20
+  { name:"The MEV Hydra",         ch:"Ψ", hp:190, atk:18, def:9,  xp:520,  color:"#fff" }, // 40
+  { name:"The Oracle of Ruin",    ch:"Σ", hp:220, atk:20, def:10, xp:650,  color:"#fff" }, // 60
+  { name:"The Finality Engine",   ch:"Λ", hp:260, atk:22, def:12, xp:820,  color:"#fff" }, // 80
+  { name:"The Genesis Parasite",  ch:"Ξ", hp:320, atk:25, def:14, xp:1200, color:"#fff" }, // 100
+];
+
+function miniBossForFloor(floor) {
+  const idx = clamp(((floor / 5) | 0) - 1, 0, MINI_BOSS_TYPES.length - 1);
+  return MINI_BOSS_TYPES[idx];
+}
+
+function bossForFloor(floor) {
+  const idx = clamp(((floor / 20) | 0) - 1, 0, BOSS_TYPES.length - 1);
+  return BOSS_TYPES[idx];
+}
 
   function pickEnemyTypeByFloor(floor) {
   // which tiers are unlocked?
@@ -1198,29 +1270,94 @@ function sameStack(a, b) {
     const enemyCount = clamp(6 + gameLevel * 2, 8, 40);
     const itemCount  = clamp(3 + (gameLevel / 4 | 0), 2, 10);
     const npcCount   = clamp((gameLevel % 3 === 0) ? 1 : 0, 0, 2);
+      
 
-    for (let i = 0; i < enemyCount; i++) {
-      const p = randomFloorTile();
-      if (!p) break;
-      const t = pickEnemyTypeByFloor(gameLevel);
-      const g = gameLevel - 1;
-const scale = 1 + g * 0.05 + g * g * 0.001;
+    // ---- Boss / Mini-boss spawn rules ----
+// Mini-boss every 5 floors (but NOT on boss floors like 20/40/60/80/100)
+const doBoss = (gameLevel % 20 === 0);
+const doMini = (!doBoss && (gameLevel % 5 === 0));
 
-      const animPhase = (p.x * 7 + p.y * 13 + i * 3) | 0;
+if (doBoss) {
+  const p = randomFloorTile();
+  if (p) {
+    const t = bossForFloor(gameLevel);
+    const g = gameLevel - 1;
+    const scale = 1 + g * 0.05 + g * g * 0.001;
 
-      entities.push({
-        ...p,
-        name: t.name,
-        ch: t.ch,
-        color: t.color,
-        hp: Math.max(6, (t.hp * scale) | 0),
-        maxhp: Math.max(6, (t.hp * scale) | 0),
-        atk: Math.max(1, (t.atk * scale) | 0),
-        def: Math.max(0, (t.def * scale) | 0),
-        xp: Math.max(6, (t.xp * scale) | 0),
-        aggro: false,
-        animPhase,
-      });
+    entities.push({
+      ...p,
+      kind: "boss",
+      name: t.name,
+      ch: t.ch,                 // Ω (shows even without art)
+      color: t.color,
+      hp: Math.max(20, (t.hp * scale) | 0),
+      maxhp: Math.max(20, (t.hp * scale) | 0),
+      atk: Math.max(3, (t.atk * scale) | 0),
+      def: Math.max(0, (t.def * scale) | 0),
+      xp: Math.max(20, (t.xp * scale) | 0),
+      aggro: true,              // bosses wake up
+      animPhase: (p.x * 7 + p.y * 13 + 999) | 0,
+      boss: true,               // tag for later (size/art/abilities)
+    });
+
+    log(`⚠️ ${t.name} rises from the Abyss.`, "#ff4");
+  }
+}
+
+if (doMini) {
+  const p = randomFloorTile();
+  if (p) {
+    const t = miniBossForFloor(gameLevel);
+    const g = gameLevel - 1;
+    const scale = 1 + g * 0.05 + g * g * 0.001;
+
+    entities.push({
+      ...p,
+      kind: "miniboss",
+      name: t.name,
+      ch: t.ch,                 // µ (shows even without art)
+      color: t.color,
+      hp: Math.max(16, (t.hp * scale) | 0),
+      maxhp: Math.max(16, (t.hp * scale) | 0),
+      atk: Math.max(2, (t.atk * scale) | 0),
+      def: Math.max(0, (t.def * scale) | 0),
+      xp: Math.max(16, (t.xp * scale) | 0),
+      aggro: true,
+      animPhase: (p.x * 7 + p.y * 13 + 555) | 0,
+      miniboss: true,           // tag for later (size/art/abilities)
+    });
+
+    log(`⚠️ Mini-boss: ${t.name}`, "#ff9");
+  }
+}
+
+const specialCount = (doBoss || doMini) ? 1 : 0;
+const normalCount = Math.max(0, enemyCount - specialCount);
+
+for (let i = 0; i < normalCount; i++) {
+
+  const p = randomFloorTile();
+  if (!p) break;
+  const t = pickEnemyTypeByFloor(gameLevel);
+  const g = gameLevel - 1;
+  const scale = 1 + g * 0.05 + g * g * 0.001;
+
+  const animPhase = (p.x * 7 + p.y * 13 + i * 3) | 0;
+
+  entities.push({
+    ...p,
+    name: t.name,
+    ch: t.ch,
+    color: t.color,
+    hp: Math.max(6, (t.hp * scale) | 0),
+    maxhp: Math.max(6, (t.hp * scale) | 0),
+    atk: Math.max(1, (t.atk * scale) | 0),
+    def: Math.max(0, (t.def * scale) | 0),
+    xp: Math.max(6, (t.xp * scale) | 0),
+    aggro: false,
+    animPhase,
+  });
+}
     }
 
     for (let i = 0; i < itemCount; i++) {
@@ -2053,13 +2190,35 @@ if (UI.gas && UI.gas.style) {
       if (!explored[e.y]?.[e.x]) continue;
       if (!isVisible(e.x, e.y)) continue;
 
-      const px = ox + e.x * TS;
-      const py = oy + e.y * TS;
+            const baseX = ox + e.x * TS;
+      const baseY = oy + e.y * TS;
 
-      const frames = enemyFrames(e.ch);
-      if (!drawSpriteFrames(frames, px, py, 1, nowMs, ANIM.mobMs, e.animPhase || 0)) {
-        drawText(px + 4, py + 2, e.ch, e.color);
+      const { frames, src, scale } = enemySpriteInfo(e);
+      const dw = TS * scale;
+      const dh = TS * scale;
+
+      // center big sprites on their tile
+      const px = baseX + (TS - dw) / 2;
+      const py = baseY + (TS - dh) / 2;
+
+      let drew = false;
+      if (frames && frames.length) {
+        const idx = animIndexFor(nowMs, frames.length, ANIM.mobMs, e.animPhase || 0);
+        const im = frames[idx] || firstAvailableFrame(frames);
+        if (im) {
+          const old = CTX.globalAlpha;
+          CTX.globalAlpha = 1;
+          CTX.drawImage(im, 0, 0, src, src, px, py, dw, dh);
+          CTX.globalAlpha = old;
+          drew = true;
+        }
       }
+
+      // ✅ fallback symbol if art missing
+      if (!drew) {
+        drawText(baseX + 4, baseY + 2, e.ch, e.color);
+      }
+
 
         // --- enemy HP bar ABOVE the sprite ---
   const w = TS - 4;
