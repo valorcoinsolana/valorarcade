@@ -1804,7 +1804,17 @@ if (target === player) {
   else if (tier === 2) lowGasPenalty = 2;  // danger
   else if (tier === 3) lowGasPenalty = 3;  // empty
 }
-   let raw = Math.max(1, attacker.atk - target.def + rand(-1, 2));
+   // --- Damage calc (armor has diminishing returns so enemies don't get stuck at 1) ---
+const roll = rand(-1, 2);
+
+// apply low gas penalty to your defense (so enemies hit harder when you're low)
+let effectiveDef = target.def | 0;
+if (target === player) effectiveDef = Math.max(0, effectiveDef - lowGasPenalty);
+
+// diminishing returns armor: damage scales with atk even vs high def
+const baseAtk = Math.max(1, (attacker.atk | 0) + roll);
+let raw = Math.max(1, Math.floor(baseAtk * (100 / (100 + effectiveDef))));
+
 
 // Enemy crits scale with LOW gas
 let crit = false;
