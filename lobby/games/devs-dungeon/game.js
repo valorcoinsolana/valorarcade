@@ -49,6 +49,59 @@ const SPRITE_SRC = 32; // source pixel size of artwork (was 16)
   let entities = [];
   let items = [];
   let npcs = [];
+  // ======================
+// Floating combat text
+// ======================
+let floatTexts = []; // { x,y, text, color, start, dur, rise, jitter }
+
+function spawnFloatText(tx, ty, text, color = "#f66") {
+  floatTexts.push({
+    x: tx,
+    y: ty,
+    text: String(text),
+    color,
+    start: performance.now(),
+    dur: 650,        // ms visible
+    rise: 0.85,      // tiles to rise over duration
+    jitter: (Math.random() * 0.25) - 0.125 // small horizontal variation (tiles)
+  });
+}
+
+function drawFloatTexts(nowMs, ox, oy) {
+  if (!floatTexts.length) return;
+
+  // Clean old
+  floatTexts = floatTexts.filter(ft => (nowMs - ft.start) < ft.dur);
+
+  CTX.save();
+  CTX.textAlign = "center";
+  CTX.textBaseline = "middle";
+  CTX.font = `bold ${Math.max(14, (TS * 0.55) | 0)}px "Courier New", monospace`;
+
+  for (const ft of floatTexts) {
+    const t = clamp((nowMs - ft.start) / ft.dur, 0, 1);
+    const alpha = 1 - t;
+
+    // rise in tile space
+    const riseTiles = ft.rise * t;
+
+    // world->screen
+    const sx = ox + (ft.x + 0.5 + ft.jitter) * TS;
+    const sy = oy + (ft.y + 0.3 - riseTiles) * TS;
+
+    // outline for readability
+    CTX.globalAlpha = alpha;
+    CTX.lineWidth = Math.max(2, (TS * 0.08) | 0);
+    CTX.strokeStyle = "rgba(0,0,0,0.85)";
+    CTX.strokeText(ft.text, sx, sy);
+
+    CTX.fillStyle = ft.color;
+    CTX.fillText(ft.text, sx, sy);
+  }
+
+  CTX.restore();
+}
+
   let gameOver = false, win = false;
   let deathMenuShown = false;
 
@@ -1701,6 +1754,9 @@ if (target === player && attacker !== player) {
 }
 
 target.hp -= raw;
+    // ✅ floating damage number
+spawnFloatText(target.x, target.y, raw, crit ? "#ff4" : "#f44");
+
 
 if (attacker === player) {
   log(`You hit ${target.name} for ${raw}.`, "#ff9");
@@ -1822,6 +1878,8 @@ function applyItem(it) {
   if (it.kind === "heal") {
     const before = player.hp;
     player.hp = Math.min(player.maxhp, player.hp + it.amount);
+    const healed = player.hp - before;
+if (healed > 0) spawnFloatText(player.x, player.y, `+${healed}`, "#6f6");
     log(`Healed ${player.hp - before}.`, "#9f9");
     beep(640, 0.06, 0.10, "triangle");
     return true;
@@ -1996,29 +2054,29 @@ function npcTrade(n) {
 function npcBlessing(n) {
   const roll = Math.random();
 
-  // ✅ ALWAYS heal first
-  const healAmt = Math.max(4, (player.maxhp * 0.25) | 0);
+  // ✅ always heal a bit
   const before = player.hp;
+  const healAmt = rand(6, 12);
   player.hp = Math.min(player.maxhp, player.hp + healAmt);
+  const healed = player.hp - before;
+  if (healed > 0) spawnFloatText(player.x, player.y, `+${healed}`, "#6f6");
+  log(`Ape Priest heals you (+${healed} HP).`, "#9f9");
 
-  if (player.hp > before) {
-    log(`Ape Priest heals you for ${player.hp - before}.`, "#9f9");
-  }
-
-  // 🎲 Then apply a blessing
-  if (roll < 0.35) {
+  // ✅ plus the old random buff
+  if (roll < 0.4) {
     player.atk += 1;
-    log("You feel stronger. (+1 ATK)", "#9f9");
+    log("You feel stronger. (+3 ATK)", "#9f9");
   } else if (roll < 0.7) {
     player.def += 1;
-    log("Your resolve hardens. (+1 DEF)", "#9f9");
+    log("Your resolve hardens. (+3 DEF)", "#9f9");
   } else {
     player.vision += 1;
-    log("Your sight expands. (+1 VISION)", "#9f9");
+    log("Your sight expands. (+3 VISION)", "#9f9");
   }
 
   beep(880, 0.06, 0.12, "triangle");
 }
+
 
 
   function tryNudgeNPC(n) {
@@ -2794,6 +2852,7 @@ if (gameOver || win) {
 
 // Mobile controls LAST so the menu is on top
 if (isMobile) drawMobileControls();
+    drawFloatTexts(nowMs, ox, oy);
     requestAnimationFrame(render);
   }
 
