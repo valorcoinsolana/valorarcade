@@ -918,6 +918,40 @@ C.addEventListener("mousedown", (e) => {
       log("Save failed (gas too high).", "#f66"); beep(120, 0.10, 0.16, "square");
     }
   }
+  function rescaleLoadedEntitiesForFloor(floor) {
+  const g = (floor | 0) - 1;
+  const scale = 1 + g * 0.05 + g * g * 0.001;
+
+  const byChEnemy = Object.create(null);
+  for (const t of ENEMY_TYPES) byChEnemy[t.ch] = t;
+
+  const byChMini = Object.create(null);
+  for (const t of MINI_BOSS_TYPES) byChMini[t.ch] = t;
+
+  const byChBoss = Object.create(null);
+  for (const t of BOSS_TYPES) byChBoss[t.ch] = t;
+
+  for (const e of entities) {
+    if (!e || e.hp <= 0) continue;
+
+    const ratio = (e.maxhp > 0) ? (e.hp / e.maxhp) : 1;
+
+    let base = null;
+    if (e.kind === "boss") base = byChBoss[e.ch];
+    else if (e.kind === "miniboss") base = byChMini[e.ch];
+    else base = byChEnemy[e.ch];
+
+    if (!base) continue;
+
+    const newMax = Math.max(1, (base.hp * scale) | 0);
+    e.maxhp = newMax;
+    e.hp = Math.max(1, (newMax * ratio) | 0);
+
+    e.atk = Math.max(1, (base.atk * scale) | 0);
+    e.def = Math.max(0, (base.def * scale) | 0);
+    e.xp  = Math.max(1, (base.xp  * scale) | 0);
+  }
+}
 
   function loadGame() {
     try {
@@ -965,6 +999,7 @@ if (player.hotbar && Array.isArray(player.hotbar)) {
 
 
       entities = d.entities || [];
+      rescaleLoadedEntitiesForFloor(gameLevel); 
       items = d.items || [];
       npcs = d.npcs || [];
       messages = d.messages || [];
