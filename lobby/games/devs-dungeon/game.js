@@ -2119,15 +2119,24 @@ else if (dy === -1) player.facing = "up";
     if (isWall(nx, ny)) { beep(100, 0.04, 0.10, "square"); return false; }
     const n = getNPCAt(nx, ny);
 if (n) {
-  // Let NPC step aside if possible (prevents corridor soft-lock)
+  // 1) Try to nudge the NPC into a neighboring tile
   if (tryNudgeNPC(n)) {
     log(`${n.name} steps aside.`, n.color || "#ff9");
     // continue movement (tile is now free)
   } else {
-    log("An NPC blocks the path. Press T to talk.", "#ff9");
-    return false;
+    // 2) If corridor is 1-wide, allow swapping places (prevents hard soft-lock)
+    // Only swap if the player's current tile is a normal walkable floor.
+    if (map[player.y]?.[player.x] === ".") {
+      const px = player.x, py = player.y;
+      n.x = px; n.y = py;      // NPC moves into your old spot
+      // continue movement into nx,ny below
+    } else {
+      log("An NPC blocks the path. Press T to talk.", "#ff9");
+      return false;
+    }
   }
 }
+
 
 
     const e = getEntityAt(nx, ny);
