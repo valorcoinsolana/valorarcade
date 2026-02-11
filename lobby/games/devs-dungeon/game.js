@@ -1500,6 +1500,20 @@ function distToFootprintManhattan(e, px, py) {
   const cy = clamp(py, b.top,  b.bottom);
   return Math.abs(px - cx) + Math.abs(py - cy);
 }
+  // Manhattan distance from point (px,py) to the nearest tile in a footprint
+// centered at (cx,cy) with size `size` (1,2,4)
+function distToFootprintManhattanAt(cx, cy, size, px, py) {
+  const half = Math.floor(size / 2);
+  const left = cx - half;
+  const top  = cy - half;
+  const right = left + size - 1;
+  const bottom = top + size - 1;
+
+  const qx = clamp(px, left, right);
+  const qy = clamp(py, top,  bottom);
+  return Math.abs(px - qx) + Math.abs(py - qy);
+}
+
 
 // Same as footprintFitsAt but ALSO ensures you won't overlap other entities footprints.
 // `self` is the moving entity (so it doesn't self-block)
@@ -1559,7 +1573,10 @@ if (doBoss) {
 for (let tries = 0; tries < 400; tries++) {
   const cand = randomFloorTile();
   if (!cand) break;
-  if (footprintFitsAt(cand.x, cand.y, 4)) { p = cand; break; }
+  if (
+  footprintFitsAt(cand.x, cand.y, 4) &&
+  distToFootprintManhattanAt(cand.x, cand.y, 4, player.x, player.y) > 5
+) { p = cand; break; }
 }
   if (p) {
     const t = bossForFloor(gameLevel);
@@ -1591,7 +1608,10 @@ if (doMini) {
 for (let tries = 0; tries < 400; tries++) {
   const cand = randomFloorTile();
   if (!cand) break;
-  if (footprintFitsAt(cand.x, cand.y, 2)) { p = cand; break; }
+  if (
+  footprintFitsAt(cand.x, cand.y, 2) &&
+  distToFootprintManhattanAt(cand.x, cand.y, 2, player.x, player.y) > 5
+) { p = cand; break; }
 }
   if (p) {
     const t = miniBossForFloor(gameLevel);
@@ -1623,9 +1643,17 @@ const normalCount = Math.max(0, enemyCount - specialCount);
 
 for (let i = 0; i < normalCount; i++) {
 
-  const p = randomFloorTile();
-  if (!p) break;
-  const t = pickEnemyTypeByFloor(gameLevel);
+  let p = null;
+for (let tries = 0; tries < 400; tries++) {
+  const cand = randomFloorTile();
+  if (!cand) break;
+  const d = Math.abs(cand.x - player.x) + Math.abs(cand.y - player.y);
+  if (d > 5) { p = cand; break; }
+}
+if (!p) break;
+
+const t = pickEnemyTypeByFloor(gameLevel);
+
   const g = gameLevel - 1;
   const scale = 1 + g * 0.05 + g * g * 0.001;
 
